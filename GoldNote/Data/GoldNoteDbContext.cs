@@ -300,7 +300,7 @@ namespace GoldNote.Data
                 // Rollback on any error
                 transaction.Rollback();
                 // Console.WriteLine($"Error saving practice session: {ex.Message}"); // Optional: for debugging
-                throw; // Re-throw the exception to notify the controller and front-end
+                throw ex; // Re-throw the exception to notify the controller and front-end
             }
 
         }

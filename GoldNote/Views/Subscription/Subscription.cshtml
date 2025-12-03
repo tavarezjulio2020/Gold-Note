@@ -1,0 +1,55 @@
+﻿@model GoldNote.Models.Subscription.SubscriptionModel
+@{
+    ViewData["Title"] = "Become a Teacher";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h1>@ViewData["Title"]</h1>
+        <p class="lead">Select your plan and create your classroom name to get started.</p>
+
+        <hr />
+
+        <form asp-action="BecomeTeacher" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <h3>1. Select Your Plan</h3>
+            <div class="form-group mb-4">
+
+                <div class="form-check">
+                    <input type="radio" asp-for="SelectedPlan" value="Promotional" class="form-check-input" id="planPromo" checked />
+                    <label class="form-check-label" for="planPromo">Promotional Free Plan (One-time Offer)</label>
+                </div>
+
+                <div class="form-check">
+                    <input type="radio" asp-for="SelectedPlan" value="Monthly" class="form-check-input" id="planMonthly" />
+                    <label class="form-check-label" for="planMonthly">Monthly Plan $5</label>
+                </div>
+
+                <div class="form-check">
+                    <input type="radio" asp-for="SelectedPlan" value="Yearly" class="form-check-input" id="planYearly" />
+                    <label class="form-check-label" for="planYearly">Yearly Plan: $30 / year (Save $30)</label>
+                </div>
+
+                <span asp-validation-for="SelectedPlan" class="text-danger"></span>
+            </div>
+
+            <h3>2. Classroom Details</h3>
+            <div class="form-group mb-4">
+                <label asp-for="ClassroomName"></label>
+                <input asp-for="ClassroomName" class="form-control" placeholder="E.g., Mr. Smith's Music Studio" />
+                <span asp-validation-for="ClassroomName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-lg">Complete Registration</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
