@@ -1,0 +1,51 @@
+﻿@model GoldNote.Models.RegisterViewModel
+
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = null;
+}
+
+<link rel="stylesheet" href="~/css/site.css" />
+
+<div id="loginForm">
+    <header>
+        <h1>GOLD NOTE</h1>
+        <h2>Create Account</h2>
+    </header>
+
+    <form method="post" asp-controller="Account" asp-action="Register">
+        <div asp-validation-summary="ModelOnly" style="color:red; margin-bottom:10px;"></div>
+
+        <label asp-for="Name">Full Name</label>
+        <input asp-for="Name" id="userNameLogin" /> <span asp-validation-for="Name" style="color:gold; font-size:0.8em;"></span>
+
+        <label asp-for="Username">User Name</label>
+        <input asp-for="Username" id="userNameLogin" />
+        <span asp-validation-for="Username" style="color:gold; font-size:0.8em;"></span>
+
+        <label asp-for="Email">Email Address</label>
+        <input asp-for="Email" type="email" id="userNameLogin" />
+        <span asp-validation-for="Email" style="color:gold; font-size:0.8em;"></span>
+
+        <label asp-for="PhoneNumber">Phone Number (Optional)</label>
+        <input asp-for="PhoneNumber" type="tel" id="userNameLogin" />
+        <span asp-validation-for="PhoneNumber" style="color:gold; font-size:0.8em;"></span>
+
+        <label asp-for="Password">Password</label>
+        <input asp-for="Password" type="password" id="userPassLogin" />
+        <span asp-validation-for="Password" style="color:gold; font-size:0.8em;"></span>
+
+        <label asp-for="ConfirmPassword">Confirm Password</label>
+        <input asp-for="ConfirmPassword" type="password" id="userPassLogin" />
+        <span asp-validation-for="ConfirmPassword" style="color:gold; font-size:0.8em;"></span>
+
+        <div style="margin-top:20px;">
+            <button id="logInButton" type="submit">Sign Up</button>
+        </div>
+    </form>
+
+    <div class="genLogButtons">
+        <p style="text-align:center; margin-top:15px;">Already have an account?</p>
+        <a class="logGeneralButton" asp-controller="Account" asp-action="Login" style="text-decoration:none; display:block; padding:10px;">Back to Login</a>
+    </div>
+</div>

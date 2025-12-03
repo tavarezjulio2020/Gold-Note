@@ -1,0 +1,113 @@
+﻿@* Home/Index.cshtml *@
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="main-content">
+
+    <div class="text-center">
+        <h1 class="display-4 gold">Welcome, @ViewBag.Username</h1>
+        <div id="teacherAccount">
+        </div>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2>🎹 Instruments I'm Learning</h2>
+
+        <div id="listOfLearning" class="list-container">
+            <p>Loading instruments...</p>
+        </div>
+
+        <div class="text-center" style="margin-top: 15px;">
+            <button id="manageInstrumentsBtn" type="button">
+                Add / Remove Instruments
+            </button>
+        </div>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2>🧑‍🏫 Teachers</h2>
+
+        <div id="listOfTeachers" class="list-container">
+            <p>Loading teachers...</p>
+        </div>
+    </div>
+
+    <form method="post" asp-controller="Account" asp-action="Logout" style="margin-top: 30px; text-align: center;">
+        <button type="submit" class="logout-button">Log Out</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            loadUserInstruments();
+            loadUserTeachers();
+
+            $('#manageInstrumentsBtn').click(function () {
+                alert('Management Page Coming Soon!');
+            });
+        });
+
+        // ===========================================
+        // FUNCTION 1: Load Instruments (Updated to use list-card)
+        // ===========================================
+        function loadUserInstruments() {
+            $.ajax({
+                url: '/Home/GetMyInstruments',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    let html = '';
+                    if (data.length === 0) {
+                        html = '<p>You are not currently learning any instruments.</p>';
+                    } else {
+                        // Changed output structure to use list-card div
+                        data.forEach(item => {
+                            html += `<div class="list-card">
+                                                <p>Instrument: <strong>${item.instrumentName}</strong></p>
+                                             </div>`;
+                        });
+                    }
+                    $('#listOfLearning').html(html);
+                },
+                error: function () {
+                    $('#listOfLearning').html('<p style="color:red;">Error loading instruments.</p>');
+                }
+            });
+        }
+
+        // ===========================================
+        // FUNCTION 2: Load Teachers (Updated to use list-card)
+        // ===========================================
+        function loadUserTeachers() {
+            $.ajax({
+                url: '/Home/GetMyTeachers',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    let html = '';
+                    if (data.length === 0) {
+                        html = '<p>You do not have any teachers .</p>';
+                    } else {
+                        // Changed output structure to use list-card div
+                        for (let i = 0; i < data.length; i++) {
+                            html += `<div class="list-card">
+                                                <p>Teacher: <strong>${data[i].name}</strong> (Teaches: ${data[i].instName})</p>
+                                             </div>`;
+                        }
+                    }
+                    $('#listOfTeachers').html(html);
+                },
+                error: function () {
+                    $('#listOfTeachers').html('<p style="color:red;">Error loading teacher list.</p>');
+                }
+            });
+        }
+    </script>
+}

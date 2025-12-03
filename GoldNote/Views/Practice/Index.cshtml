@@ -1,0 +1,348 @@
+﻿@{
+    ViewData["Title"] = "Practice";
+}
+
+<div class="practiceDiv">
+    <h2 class="blue">Start New Practice</h2>
+    <select class="selector" name="instSelector" id="instrument_selection">
+    </select>
+    <button class="btn-play" id="startPracticeBtn"> &#9658; </button>
+</div>
+
+<div id="todaysNotes">
+    <h2>Today's Notes</h2>
+    <b>Time PracticedToday:</b> <p id="practicedTime"></p>
+    <b>Items Practiced:</b> <p id="itemsPracticed"></p>
+</div>
+
+<div id="inPractice">
+    <div id="currentTimePracticed">
+        <span id="timerDisplay">00:00</span>
+    </div>
+
+    <div id="curPractButtons">
+        <button id="pause">| |</button>
+        <button id="stop">Stop</button>
+    </div>
+
+    <div id="doAssignment">
+        <form id="assignmentForm">
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+
+        /* CSS for the Collapsible Assignments */
+                .assignment-header {
+                        cursor: pointer;
+                        padding: 8px;
+                        border-bottom: 1px solid #333;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        background-color: #222;
+
+        }
+
+                .assignment-description {
+
+            /* Initially hide the description content */
+                        display: none;
+                        padding: 10px;
+                        margin: 0;
+                        background-color: #333;
+                        color: #ccc;
+                        font-size: 0.9rem;
+
+        }
+
+                .arrow {
+                        transition: transform 0.3s ease;
+                        font-size: 0.8em;
+                        margin-left: 10px;
+
+        }
+
+                    .arrow.rotated {
+                            transform: rotate(90deg); /* Arrow points down when expanded */
+
+            }
+
+
+    </style>
+
+    <script>
+        // Global variables
+        var timerInterval;
+        var seconds = 0;
+        var isPaused = false;
+        var practiceStartTime;
+
+        $(document).ready(function () {
+            getInstruments();
+
+            $('#instrument_selection').change(function () {
+                updatePracticeNotes();
+            });
+
+            $('#startPracticeBtn').click(function () {
+                startPractice();
+            });
+
+            $('#pause').click(function () {
+                togglePause();
+            });
+
+            $('#stop').click(function () {
+                stopPractice();
+            }); 
+
+            $('#assignmentForm').on('click', '.assignment-header', function (event) {                 
+                if ($(event.target).is('input[type="checkbox"]') || $(event.target).is('label')) { 
+                    return;
+                }                 
+                $(this).find('.arrow').toggleClass('rotated');                 
+                $(this).next('.assignment-description').slideToggle(200);
+            });
+        });
+ 
+        function stopPractice() {
+            // 1. Stop the Timer
+            clearInterval(timerInterval);
+            isPaused = true;
+
+            // Optional: Hide practice UI, show notes UI (adjust as needed for your final layout)
+            $('#inPractice').hide();
+            $('.practiceDiv, #todaysNotes').show();
+
+            // 2. Collect Data
+            const totalSeconds = seconds;
+            const startTime = practiceStartTime.toISOString(); // Format start time for C# controller
+            const instrumentId = $('#instrument_selection').val();
+
+            // Get all checked assignment IDs
+            const completedAssignmentIds = [];
+            $('input[name="assignment_complete"]:checked').each(function () {
+                completedAssignmentIds.push($(this).val());
+            });
+
+            // The data object to send to the server
+            const practiceData = {
+                instrumentId: instrumentId,
+                startTime: startTime,
+                durationSeconds: totalSeconds,
+                completedAssignmentIds: completedAssignmentIds
+            };
+
+            console.log("Saving Practice Data:", practiceData);
+
+            // 3. AJAX POST Call
+            $.ajax({
+                url: '/Practice/SavePracticeSession', // **NOTE: You must create this C# action method**
+                type: 'POST',
+                contentType: 'application/json', // Tell the server we are sending JSON
+                data: JSON.stringify(practiceData), // Convert the JavaScript object to a JSON string
+                success: function (response) {
+                    console.log("Save successful:", response);
+                    alert("Practice session saved!");
+
+                    // Optional: Update today's notes
+                    $('#practicedTime').text(Math.floor(totalSeconds / 60) + " minutes");
+                    $('#itemsPracticed').text(completedAssignmentIds.length);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Save failed:", status, error);
+                    alert("Error saving practice session.");
+                    // Revert UI changes or show error to user
+                }
+            });
+        }
+        
+        function startPractice() {
+            var instId = $('#instrument_selection').val();
+
+            if (!instId) {
+                alert("Please select an instrument first!");
+                return;
+            }
+
+            // UI Switching
+            $('.practiceDiv, #todaysNotes').hide();
+            $('#inPractice').css('display', 'flex');
+
+            loadAssignments(instId);
+
+            // Timer Setup
+            seconds = 0;
+            isPaused = false;
+            $('#timerDisplay').text("00:00");
+            $('#pause').text("| |"); // Reset pause button text
+            practiceStartTime = new Date();
+
+            // Start the clock
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+ 
+        function loadAssignments(id) {
+            $('#assignmentForm').html('<p style="color:white;">Loading...</p>');
+
+            $.ajax({
+                url: '/Practice/GetAssignments',
+                data: { instrumentId: id },
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    console.log("Assignments loaded:", data);
+
+                    var html = "";
+
+                    if (data.length === 0) {
+                        html = "<p>No assignments found for this instrument.</p>";
+                    } else {
+                        for (var i = 0; i < data.length; i++) {
+                            const assignment = data[i];
+                            // Using lowercase properties (id, title, description)
+                            const assignmentId = assignment.id;
+
+                            // Start of Assignment Container
+                            html += '<div style="margin-bottom:15px; border: 1px solid #555;">';
+
+                            // 1. Assignment Header (Clickable part)
+                            html += '<div class="assignment-header">';
+
+                            // Checkbox and Title
+                            html += '<div>';
+                            html += '<input type="checkbox" name="assignment_complete" value="' + assignmentId + '" id="asgn_' + assignmentId + '"> ';
+                            // Use lowercase 'title'
+                            html += '<label for="asgn_' + assignmentId + '" style="margin-left:10px; font-weight: bold;">' + assignment.title + '</label>';
+                            html += '</div>';
+
+                            // Dropdown Arrow (Unicode right-pointing triangle)
+                            html += '<span class="arrow">&#9658;</span>';
+
+                            html += '</div>'; // End assignment-header
+
+                            // 2. Assignment Description (Hidden part)
+                            // Use lowercase 'description'
+                            html += '<p class="assignment-description">';
+                            html += assignment.description;
+                            html += '</p>';
+
+                            html += '</div>'; // End Assignment Container
+                        }
+                    }
+
+                    // Put the HTML into the form
+                    $('#assignmentForm').html(html);
+                },
+                error: function () {
+                    $('#assignmentForm').html('<p style="color:red;">Error loading assignments.</p>');
+                }
+            });
+        }
+
+        function togglePause() {
+            if (isPaused) {
+                // RESUME
+                timerInterval = setInterval(updateTimer, 1000);
+                $('#pause').text("| |"); // Change text back to Pause symbol
+                isPaused = false;
+            } else {
+                // PAUSE
+                clearInterval(timerInterval); // Stop the clock
+                $('#pause').text("Resume"); // Change text to Resume
+                isPaused = true;
+            }
+        }
+
+        function updateTimer() {
+            seconds++;
+            var m = Math.floor(seconds / 60);
+            var s = seconds % 60;
+
+            // Add leading zeros (e.g., 5 becomes 05)
+            var timeString = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+
+            $('#timerDisplay').text(timeString);
+        }
+
+        function updatePracticeNotes() {
+            const selectedInstId = $('#instrument_selection').val(); 
+            $('#itemsPracticed').empty();
+            $.ajax({
+                url: '/Practice/getTodayPracticeTime',
+                type: 'GET',
+                data: { instrumentId: selectedInstId || 0 },
+                dataType: 'json',
+                success: function (data) {
+                    console.log("Practice Summary loaded:", data);
+
+                    let htmlList = "";  
+                    let totalSecondsAll = 0; 
+
+                    if (data.length === 0) { 
+                        $('#practicedTime').text('0 minutes');
+                        $('#itemsPracticed').html("<p>No practice time recorded today.</p>");
+                        return;
+                    } 
+                    data.forEach(item => { 
+                        const timeString = formatDuration(item.totalSecondsPracticed); 
+                        totalSecondsAll += item.totalSecondsPracticed;
+                         
+                        htmlList += `<div style="margin-bottom: 5px; font-size: 1.1rem;">
+                                                <strong>${item.instrumentName}</strong>: ${timeString}
+                                             </div>`;
+                    }); 
+                    $('#practicedTime').html(htmlList);
+                     
+                    // $('#itemsPracticed').html(htmlList);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Failed to load practice summary:", status, error);
+                    $('#practicedTime').text('Error loading data.');
+                }
+            });
+        }
+
+        function formatDuration(totalSeconds) {
+            if (totalSeconds === 0) return '0 minutes';
+
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60; // <--- 1. Calculate remaining seconds
+
+            let parts = [];
+            if (hours > 0) parts.push(`${hours} hr`);
+            if (minutes > 0) parts.push(`${minutes} min`);
+
+            // 2. Add seconds if they exist, or if the total time is just seconds
+            if (seconds > 0 || parts.length === 0) {
+                parts.push(`${seconds} sec`);
+            }
+
+            return parts.join(', ');
+        }
+
+        function getInstruments() {
+            $.ajax({
+                url: '/Practice/GetMyInstruments',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var html = "<option value=''>-- Select Instrument --</option>";
+                    for (let i = 0; i < data.length; i++) {
+                        html += "<option value='" + data[i].instrumentId + "'>" + data[i].instrumentName + "</option>"
+                    }
+                    $('#instrument_selection').html(html);
+
+                    // Initial call to populate notes section
+                    updatePracticeNotes();
+                }
+            });
+        }
+    </script>
+}

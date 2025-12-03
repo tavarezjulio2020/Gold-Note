@@ -1,0 +1,47 @@
+﻿@{
+	ViewData["Title"] = "Login Page";
+	Layout = null; // Use null layout for a clean login page
+}
+
+<link rel="stylesheet" href="~/css/site.css" />
+
+<div id="loginForm">
+	<header>
+		<h1>GOLD NOTE</h1>
+		<h2>Log In</h2>
+	</header>
+
+	<form method="post" asp-controller="Account" asp-action="Login">
+
+		@if (ViewData["Error"] != null)
+		{
+			<div style="color:red; margin-bottom: 15px;">
+				@ViewData["Error"]
+			</div>
+		}
+		@if (TempData["Success"] != null)
+		{
+		    <div style="color: #FFD700; margin-bottom: 15px; font-weight:bold;">
+		        @TempData["Success"]
+		    </div>
+		}
+
+		<label for="userLogin">User Name</label>
+		<input id="userNameLogin" name="Username" />
+
+		<label for="passLogin">Password</label>
+		<input id="userPassLogin" type="password" name="Password" />
+
+		<div>
+			<button id="logInButton" type="submit">Log in</button>
+		</div>
+	</form>
+
+	<div class="genLogButtons">
+		<button class="logGeneralButton" type="button">Forgot Password?</button>
+		<button class="logGeneralButton" type="button">Forgot Username?</button>
+		<a class="logGeneralButton" asp-controller="Account" asp-action="Register" style="text-decoration:none; display:block; padding:5px;">
+			Create Account!
+		</a>
+	</div>
+</div>

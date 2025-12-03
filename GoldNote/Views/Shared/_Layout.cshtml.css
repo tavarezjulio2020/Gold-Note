@@ -1,0 +1,99 @@
+﻿/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+a.navbar-brand {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+  color:rgb(255 216 0);
+}
+
+a {
+  color: #0077cc;
+}
+
+/* --- Header/Navbar Styling --- */
+   /* In your site.css / _Layout.cshtml.css */
+
+   /* Target the default Bootstrap link color for the brand */
+   a.navbar-brand {
+        white-space: normal;
+        text-align: center;
+        word-break: break-all;
+       
+      /* 💡 We need to use !important to guarantee the gold color overrides the default blue link color */
+        color: var(--primary-color) !important;
+   }
+
+/* 💡 Ensure the custom gold-brand class also enforces the color and styling */
+.gold-brand {
+   color: var(--primary-color) !important;
+   font-size: 1.5em;
+   font-weight: bold;
+   text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+   transition: color 0.3s;
+}
+
+   .gold-brand:hover {
+      color: var(--tri-color) !important;
+   }
+
+/* Also ensure your custom dark background class is defined */
+.bg-secondary-dark {
+   background-color: var(--secondary-background) !important; /* Dark gray */
+   border-bottom: 1px solid var(--primary-color);
+   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+
+/* 💡 Style the Brand Name (GoldNote) */
+
+.navbar-toggler {
+   border-color: rgba(255, 255, 255, 0.5); /* Light border */
+}
+
+.navbar-dark .navbar-nav .nav-link {
+   color: rgba(255, 255, 255, 0.8); /* White or light color for links */
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+   color: var(--primary-color); /* Gold hover effect */
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.border-top {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.box-shadow {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+button.accept-policy {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+.footer {
+   position: absolute;
+   bottom: 0;
+   width: 100%;
+   white-space: nowrap;
+   /* 💡 Ensure the height is defined and use this value for body margin */
+   height: 90px;
+   line-height: 60px;
+}
