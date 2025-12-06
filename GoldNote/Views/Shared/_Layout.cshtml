@@ -29,7 +29,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container text-center" style="background-color: black">
-            <div class="btn-group mt-2 mb-2" role="group" aria-label="Footer Navigation">
+            <div style="width:100%" class="btn-group mt-2 mb-2" role="group" aria-label="Footer Navigation">
 
                 <a class="btn btn-outline-primary" asp-area="" asp-controller="Home" asp-action="Index">
                     Home
@@ -43,16 +43,13 @@
                 {
                     // Scenario 1: User IS a Teacher
                     // Button takes them to the teacher dashboard
-                    <a class="nav-link text-dark teacher-button" asp-area="" asp-controller="Teacher" asp-action="Teacher_index">
-                        Teacher Dashboard
+                    <a class="btn btn-outline-info" asp-area="" asp-controller="Teacher" asp-action="Teacher_index">
+                        Teacher
                     </a>
                 }
                 else
                 {
-                    // Scenario 2: User IS NOT a Teacher
-                    // Button prompts them to subscribe/register as a teacher
-                    // **You need to replace "Subscription" with your actual Controller/Action**
-                    <a class="btn btn-outline-info" asp-area="" asp-controller="Subscription" asp-action="BecomeTeacher">
+                    <a class="btn btn-outline-info" asp-area="" asp-controller="Subscription" asp-action="Subscription">
                         Teacher
                     </a>
                 }

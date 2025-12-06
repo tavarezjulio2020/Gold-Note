@@ -15,10 +15,10 @@ namespace GoldNote.Controllers.Teachers
         private readonly Teacher _t; // Note: This is unused and causing a warning (IDF0051)
 
         // Constructor for dependency injection (assuming you have one)
-        // public TeacherController(Teacher t)
-        // {
-        //     _t = t;
-        // }
+        public TeacherController(Teacher t)
+        {
+            _t = t;
+        }
 
         [HttpGet]
         [Route("Teacher")]
@@ -38,14 +38,9 @@ namespace GoldNote.Controllers.Teachers
             // Implementation for fetching and returning student data as JSON
             var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Example student data (REPLACE with your actual database call using teacherId)
-            var students = new List<object>
-            {
-                new { Name = "Alice Johnson", Instrument = "Piano" },
-                new { Name = "Bob Williams", Instrument = "Guitar" }
-            };
+            var students = _t.getMyStudents(teacherId);
 
-            return Json(students);
+            return Json(students);                                     
         }
     }
 }

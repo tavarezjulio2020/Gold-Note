@@ -4,37 +4,32 @@
 }
 
 <div class="main-content">
-
     <div class="text-center">
         <h1 class="display-4 gold">Welcome, @ViewBag.Username</h1>
-        <div id="teacherAccount">
-        </div>
+        <div id="teacherAccount"></div>
     </div>
-
-
     <hr>
 
     <div>
         <h2>🎹 Instruments I'm Learning</h2>
-
         <div id="listOfLearning" class="list-container">
             <p>Loading instruments...</p>
         </div>
-
         <div class="text-center" style="margin-top: 15px;">
-            <button id="manageInstrumentsBtn" type="button">
-                Add / Remove Instruments
-            </button>
+            <button id="manageInstrumentsBtn" type="button">Add / Remove Instruments</button>
         </div>
     </div>
-
     <hr>
 
     <div>
         <h2>🧑‍🏫 Teachers</h2>
-
         <div id="listOfTeachers" class="list-container">
             <p>Loading teachers...</p>
+        </div>
+        <div class="text-center" style="margin-top: 15px;">
+            <button id="teacherRegistrationBtn" type="button" class="btn-gold">
+                Teacher Registration
+            </button>
         </div>
     </div>
 
@@ -43,21 +38,61 @@
     </form>
 </div>
 
+<div id="classRegOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h3>Join a Class</h3>
+        <form id="classRegistrationForm">
+            <div style="margin-bottom: 15px;">
+                <label for="classCode" style="display:block;">Enter Class Code:</label>
+                <input type="text" id="classCode" required style="width: 100%; padding: 5px;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="instruments" style="display:block;">Which instrument will you learn?</label>
+                <select name="instrument" id="instruments" required style="width: 100%; padding: 5px;">
+                </select>
+            </div>
+
+            <div class="text-center">
+                <button type="submit">Send Request</button>
+                <button type="button" onclick="closeClassModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        let userInstrumentIds = [];
+
         $(document).ready(function () {
             loadUserInstruments();
             loadUserTeachers();
 
             $('#manageInstrumentsBtn').click(function () {
-                alert('Management Page Coming Soon!');
+                showManageInstrumentsModal();
             });
+
+            // Button to open Class Registration Modal
+            $('#teacherRegistrationBtn').click(function () {
+                populateInstRegistration(); // Load data and show modal
+            });
+
+            // Handle the Class Registration Form Submit
+            $('#classRegistrationForm').submit(function (e) {
+                e.preventDefault();
+                submitClassRegistration();
+            });
+
+            // Create the Instrument Modal DOM elements if they don't exist
+            if ($('#instrumentModal').length === 0) {
+                $('body').append('<div id="instrumentModalOverlay" class="modal-overlay" style="display:none;"></div>');
+                $('body').append('<div id="instrumentModal" class="modal-box" style="display:none;"></div>');
+            }
         });
 
-        // ===========================================
-        // FUNCTION 1: Load Instruments (Updated to use list-card)
-        // ===========================================
+        // ... [loadUserInstruments and loadUserTeachers functions remain the same] ...
         function loadUserInstruments() {
             $.ajax({
                 url: '/Home/GetMyInstruments',
@@ -65,27 +100,20 @@
                 dataType: 'json',
                 success: function (data) {
                     let html = '';
+                    userInstrumentIds = data.map(item => item.instrumentId);
                     if (data.length === 0) {
                         html = '<p>You are not currently learning any instruments.</p>';
                     } else {
-                        // Changed output structure to use list-card div
                         data.forEach(item => {
-                            html += `<div class="list-card">
-                                                <p>Instrument: <strong>${item.instrumentName}</strong></p>
-                                             </div>`;
+                            html += `<div class="list-card"><p>Instrument: <strong>${item.instrumentName}</strong></p></div>`;
                         });
                     }
                     $('#listOfLearning').html(html);
                 },
-                error: function () {
-                    $('#listOfLearning').html('<p style="color:red;">Error loading instruments.</p>');
-                }
+                error: function () { $('#listOfLearning').html('<p style="color:red;">Error loading instruments.</p>'); }
             });
         }
 
-        // ===========================================
-        // FUNCTION 2: Load Teachers (Updated to use list-card)
-        // ===========================================
         function loadUserTeachers() {
             $.ajax({
                 url: '/Home/GetMyTeachers',
@@ -94,21 +122,200 @@
                 success: function (data) {
                     let html = '';
                     if (data.length === 0) {
-                        html = '<p>You do not have any teachers .</p>';
+                        html = '<p>You do not have any teachers.</p>';
                     } else {
-                        // Changed output structure to use list-card div
-                        for (let i = 0; i < data.length; i++) {
-                            html += `<div class="list-card">
-                                                <p>Teacher: <strong>${data[i].name}</strong> (Teaches: ${data[i].instName})</p>
-                                             </div>`;
-                        }
+                        data.forEach(item => {
+                            html += `<div class="list-card"><p>Teacher: <strong>${item.name}</strong> (Teaches: ${item.instName})</p></div>`;
+                        });
                     }
                     $('#listOfTeachers').html(html);
                 },
-                error: function () {
-                    $('#listOfTeachers').html('<p style="color:red;">Error loading teacher list.</p>');
+                error: function () { $('#listOfTeachers').html('<p style="color:red;">Error loading teacher list.</p>'); }
+            });
+        }
+
+        // ... [showManageInstrumentsModal & handleInstrumentUpdate remain the same] ...
+        function showManageInstrumentsModal() {
+            // (Keep your existing logic here)
+            // Just ensure you use the new CSS classes defined below
+            // ...
+            // For brevity, assuming existing logic calls $('#instrumentModal').show() etc.
+
+            // ... inside your AJAX success ...
+            // Instead of alert error, you might want to reuse this logic
+            $.ajax({
+                url: '/Home/GetInstruments',
+                type: 'GET',
+                dataType: 'json',
+                success: function (allInstruments) {
+                    let modalContent = '<h3>Select Instruments to Learn:</h3><form id="instrumentUpdateForm">';
+                    allInstruments.forEach(instrument => {
+                        const isChecked = userInstrumentIds.includes(instrument.instrumentId);
+                        modalContent += `<div style="margin-bottom: 10px; border-bottom:1px solid #eee;">
+                                                    <input type="checkbox" id="inst-${instrument.instrumentId}" name="instrumentId" value="${instrument.instrumentId}" ${isChecked ? 'checked' : ''}>
+                                                    <label for="inst-${instrument.instrumentId}" style="margin-left:10px;">${instrument.instrumentName}</label>
+                                                 </div>`;
+                    });
+                    modalContent += `<button type="submit">Save Changes</button> <button type="button" onclick="closeInstrumentModal()">Cancel</button></form>`;
+
+                    $('#instrumentModal').html(modalContent).show();
+                    $('#instrumentModalOverlay').show();
+                    $('#instrumentUpdateForm').off('submit').on('submit', handleInstrumentUpdate);
                 }
             });
         }
+
+        function handleInstrumentUpdate(e) {
+            e.preventDefault();
+            let selectedInstrumentIds = [];
+            $('input[name="instrumentId"]:checked').each(function () {
+                selectedInstrumentIds.push(parseInt($(this).val()));
+            });
+            $.ajax({
+                url: '/Home/UpdateMyInstruments',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(selectedInstrumentIds),
+                success: function (response) {
+                    if (response.success) {
+                        alert('Your learning instruments have been updated!');
+                        closeInstrumentModal();
+                        loadUserInstruments();
+                    } else {
+                        alert('Update failed: ' + response.message);
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // NEW FUNCTIONS FOR CLASS REGISTRATION
+        // ============================================
+
+        function populateInstRegistration() {
+            $.ajax({
+                url: '/Home/GetMyInstruments', // Fetch instruments student is ALREADY learning
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var html = '';
+                    if (data.length === 0) {
+                        html = '<option disabled selected>You must add an instrument above first</option>';
+                    } else {
+                        for (let i = 0; i < data.length; i++) {
+                            // value is learn_id (needed for database), text is Name
+                            html += '<option value="' + data[i].learnID + '">' + data[i].instrumentName + '</option>';
+                        }
+                    }
+                    $('#instruments').html(html);
+
+                    // SHOW THE MODAL
+                    $('#classRegOverlay').fadeIn();
+                }
+            });
+        }
+
+        function submitClassRegistration() {
+            var classcode = $('#classCode').val();
+            var instId = $('#instruments').val(); // This gets the learnID from the value attribute
+
+            if (!instId) { alert("Please select an instrument."); return; }
+
+            $.ajax({
+                url: '/Home/RegisterForTeacher', // Capitalized to match Controller usually, but case-insensitive in routing
+                data: { code: classcode, studentlearn: instId },
+                type: 'POST', // Missing comma was here in your code
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.message);
+                        closeClassModal();
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function () {
+                    alert("Server error processing request.");
+                }
+            });
+        }
+
+        function closeClassModal() {
+            $('#classRegOverlay').fadeOut();
+            $('#classCode').val(''); // Clear input
+        }
+
+        function closeInstrumentModal() {
+            $('#instrumentModal').hide();
+            $('#instrumentModalOverlay').hide();
+        }
     </script>
+
+    <style>
+        /* Shared Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .modal-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            color: black !important; /* Force text color */
+            width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+            /* Input styling inside modals */
+            .modal-box label {
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+
+            .modal-box button {
+                margin-top: 15px;
+                margin-right: 10px;
+                padding: 8px 16px;
+                cursor: pointer;
+            }
+
+        .btn-gold {
+            background-color: #FFD700; /* Gold color */
+            color: #000; /* Black text for high contrast */
+            border: none; /* Remove default border */
+            padding: 12px 24px; /* Make it bigger and easier to click */
+            font-size: 1.1rem; /* Slightly larger text */
+            font-weight: bold; /* Bold text */
+            border-radius: 25px; /* Rounded "Pill" shape corners */
+            cursor: pointer; /* Show hand icon on hover */
+            transition: all 0.3s ease; /* Smooth animation for hover */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Subtle shadow for depth */
+        }
+
+            /* Hover Effect: Darker Gold + slight lift */
+            .btn-gold:hover {
+                background-color: #e6c200; /* Slightly darker gold */
+                transform: translateY(-2px); /* Moves button up slightly */
+                box-shadow: 0 6px 8px rgba(0,0,0,0.4); /* Shadow grows */
+            }
+
+            /* Active Effect: Click press */
+            .btn-gold:active {
+                transform: translateY(0); /* returns to normal position */
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            }
+    </style>
 }

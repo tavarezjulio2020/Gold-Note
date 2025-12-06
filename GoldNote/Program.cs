@@ -1,14 +1,16 @@
 using GoldNote.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using GoldNote.Models.Student;
+using GoldNote.Models.Teacher;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+//builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 builder.Services.AddSingleton<GoldNoteDbContext>();
-builder.Services.AddScoped<StudentModel>();
+builder.Services.AddScoped<StudentModel>(); 
+builder.Services.AddScoped<GoldNote.Models.Teacher.Teacher>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {

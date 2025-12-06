@@ -7,11 +7,15 @@ using System.Diagnostics.Metrics;
 
 namespace GoldNote.Data
 {
-	public class User {
-		public int Id { get; set; }
-		public string Unique_id { get; set; }
-		public string Name { get; set; }
-	}
+    // Inside GoldNoteDbContext.cs
+
+    public class User
+    {
+        public int Id { get; set; }
+        public string Unique_id { get; set; }
+        public string Name { get; set; }
+        public bool IsTeacher { get; set; }  
+    }
 
     public class InstrumentItem 
     {
@@ -79,11 +83,18 @@ namespace GoldNote.Data
             User foundUser = null;
 
             // 2. Your SQL Query
-            string sql = @" SELECT name, profile_id, account_id
-							FROM profile
-							INNER JOIN account ON account.id = profile.account_id
-							WHERE account.userName = @username
-							  AND account.passcode = @pass;
+            string sql = @" SELECT  p.name, 
+                                    p.profile_id, 
+                                    p.account_id, 
+                                    COUNT(r.role_id) AS IsTeacher
+                            FROM    profile p
+                            INNER JOIN account a 
+                                  ON a.id = p.account_id
+                            LEFT JOIN profile_Role r 
+                                  ON r.account_id = p.account_id
+                            WHERE a.userName = @username
+                                  AND a.passcode = @pass
+                            GROUP BY p.name, p.profile_id, p.account_id;
 						";
 
             using var con = new SqlConnection(_connectionString);
@@ -104,18 +115,10 @@ namespace GoldNote.Data
             {
                 // Create the User object
                 foundUser = new User();
-
-                // --- MAPPING START ---
-                // Map SQL "name" -> User.Name
                 foundUser.Name = reader["name"].ToString();
-
-                // Map SQL "account_id" -> User.Id
-                // We use Convert.ToInt32 to ensure it is an int
                 foundUser.Id = Convert.ToInt32(reader["account_id"]);
-
-                // Map SQL "profile_id" -> User.Unique_id
                 foundUser.Unique_id = reader["profile_id"].ToString();
-                // --- MAPPING END ---
+                foundUser.IsTeacher = Convert.ToInt32(reader["IsTeacher"]) > 0;
             }
 
             // 6. Return the found user (or null if login failed)

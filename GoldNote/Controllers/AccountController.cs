@@ -47,13 +47,16 @@ namespace GoldNote.Controllers
                 return View(model);
             }
 
-            // *** THIS IS THE CRITICAL SIGN-IN STEP ***
-            // Create the "claims" (user's identity data)
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Unique_id),
                 new Claim(ClaimTypes.Name, user.Name)
             };
+
+            if(user.IsTeacher)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "Teacher"));
+            }
 
             var claimsIdentity = new ClaimsIdentity(
                 claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -62,13 +65,9 @@ namespace GoldNote.Controllers
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity));
-            
-            // Success! Redirect to the main (protected) part of your app
-            // (e.g., the Home/Index page)
             return RedirectToAction("Index", "Home");
         }
 
-        // 3. This action HANDLES the logout
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
