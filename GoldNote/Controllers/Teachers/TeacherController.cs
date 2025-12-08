@@ -24,9 +24,11 @@ namespace GoldNote.Controllers.Teachers
         [Route("Teacher")]
         public IActionResult Teacher_index()
         {
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             // 1. Get the current user's name from the identity/cookie
             ViewBag.Username = User.Identity.Name;
-
+            var classcode = _t.GetClassCode(teacherId);
+            ViewBag.ClassCode = classcode;
             // 2. Pass control to the View Engine to render Teacher_index.cshtml
             return View();
         }

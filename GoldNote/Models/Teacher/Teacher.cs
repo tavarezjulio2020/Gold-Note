@@ -10,18 +10,22 @@ namespace GoldNote.Models.Teacher
     {
         public int AssignmentId { get; set; }
         public string Title { get; set; }
-        public string Description { get; set; } 
-        public string TeacherNotes { get; set; } 
-        public int TimesPracticedThisWeek { get; set; } 
+        public string Description { get; set; }
+        public string TeacherNotes { get; set; }
+        public int TimesPracticedThisWeek { get; set; }
     }
 
     // --- 2. Model for a Single Student Row (The main expandable div) ---
     public class StudentDashboardItem
     {
-        public string ProfileId { get; set; }  
+        public string ProfileId { get; set; }
         public string StudentName { get; set; }
         public string InstrumentName { get; set; }
-        public int    secondsPracticed { get; set; }   
+        public int secondsPracticed { get; set; }
+    }
+    public class classCode
+    {
+        public string ClassCode { get; set; }
     }
     public class Teacher
     {
@@ -62,7 +66,7 @@ namespace GoldNote.Models.Teacher
             con.Open();
             using var reader = cmd.ExecuteReader();
 
-            while(reader.Read())
+            while (reader.Read())
             {
                 data.Add(new StudentDashboardItem()
                 {
@@ -75,9 +79,32 @@ namespace GoldNote.Models.Teacher
             return data;
         }
 
+        public classCode GetClassCode(string userId)
+        {
+            classCode data = null;
 
+            string sql = @" SELECT join_Code 
+                            FROM classRoom 
+                            WHERE teacher_id = @teacherID
+            ";
 
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@teacherID", userId);
+
+            con.Open();
+            using var reader = cmd.ExecuteReader();
+
+            if (reader.Read()) // only read one row
+            {
+                data = new classCode()
+                {
+                    ClassCode = reader["join_Code"].ToString()
+                };
+            }
+            return data; // returns null if no row found
+        }
 
     }
-
 }
