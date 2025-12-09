@@ -44,5 +44,16 @@ namespace GoldNote.Controllers.Teachers
 
             return Json(students);                                     
         }
+
+        [HttpGet] 
+        public IActionResult GetJoinRequest()
+        {
+            // Implementation for fetching and returning student data as JSON
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var students = _t.GetPendingRequests(teacherId);
+
+            return Json(students);
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿@model GoldNote.Models.Subscription.SubscriptionModel
+
 @{
     ViewData["Title"] = "Become a Teacher";
 }
@@ -42,7 +43,7 @@
             </div>
 
             <div class="form-group">
-                <button type="submit" class="btn btn-primary btn-lg">Complete Registration</button>
+                <button type="submit" id="registerAsTeacher" class="btn btn-primary btn-lg">Complete Registration</button>
             </div>
         </form>
     </div>
@@ -52,4 +53,7 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+
+    </script>
 }
