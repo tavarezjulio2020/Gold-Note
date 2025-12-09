@@ -3,18 +3,21 @@
 
 <div class="text-center">
     <h1 class="display-4 gold">@ViewBag.Username</h1>
-    <div> 
-       <h2>Class Code: @ViewBag.ClassCode.ClassCode</h2> 
-    </div>
-
-    <div class="top-right-icon">
-        <button type="button" class="btn btn-lg" data-bs-toggle="modal" data-bs-target="#RequestModal" style="color: white;">
-            <i class="fas fa-envelope"></i>
-        </button>
+    
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        
+        <h2 class="m-0 me-3">Class Code: @ViewBag.ClassCode.ClassCode</h2>
+        
+        <div style="position: relative;">
+            <button type="button" class="btn btn-lg" data-bs-toggle="modal" data-bs-target="#RequestModal" style="color: white; padding: 0.5rem;">
+                <i class="fas fa-envelope" style="position: relative;">
+                    <span id="request-badge" class="notification-badge hidden"></span>
+                </i>
+            </button>
+        </div>
     </div>
 </div>
 
-<h2>Your Students</h2>
 
 <table class="table table-hover student-list-table">
     <thead>
@@ -30,12 +33,53 @@
     </tbody>
 </table>
 
+<div class="modal fade" id="RequestModal" tabindex="-1" aria-labelledby="RequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="RequestModalLabel">Pending Classroom Requests</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="requestsContainer">
+                    <p class="text-center text-muted">Loading requests...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
             getStudents();
+            checkInitialRequests();
+            $('#RequestModal').on('show.bs.modal', function (e) {
+                loadRequests();
+            });
         });
+
+        function checkInitialRequests() {
+            $.ajax({
+                url: '/Teacher/GetJoinRequest', 
+                dataType: 'json',
+                type: 'GET',
+                success: function(data) {
+                    // Update the badge status immediately after fetching the data
+                    updateRequestBadge(data.length); 
+                }
+            });
+        }
+
+        function updateRequestBadge(count) {
+            const $badge = $('#request-badge');
+            if (count > 0) {
+                $badge.removeClass('hidden');
+            } else {
+                $badge.addClass('hidden');
+            }
+        }
 
         function getStudents(){
            $.ajax({
@@ -51,6 +95,52 @@
                  $('#studentTableBody').html(html);
               }
            });
+        }
+
+      function loadRequests() {
+         var $container = $('#requestsContainer');
+         $container.html('<p class="text-center text-muted">Loading requests...</p>'); 
+
+         $.ajax({
+         url: '/Teacher/GetJoinRequest', // ✅ Correct URL as confirmed
+         dataType: 'json',
+         type: 'GET',
+         success: function(data) {
+            console.log('Request to join class', data);
+            
+            if (data.length === 0) {
+                $container.html('<p class="text-center text-muted">No new classroom requests currently pending.</p>');
+                return;
+            }
+
+            // Start building a proper HTML table with headers
+            var html = '<table class="table table-hover table-sm">';
+            html += '<thead><tr><th>Student</th><th>Instrument</th><th>Actions</th></tr></thead>';
+            html += '<tbody>'; 
+            
+            for(let i = 0; i < data.length; i++){
+                var request = data[i];  
+                 html += "<tr>"; 
+                 html += "<td>" + request.studentName + "</td>"; 
+                 html += "<td>" + request.instrumentName + "</td>";  
+                 var requestId = request.requestId; 
+                 
+                 html += "<td>"; 
+                 html += `<a href="/Teacher/AcceptRequest?requestId=${requestId}" class="btn btn-success btn-sm me-2">Accept</a>`; 
+                 html += `<a href="/Teacher/RejectRequest?requestId=${requestId}" class="btn btn-danger btn-sm">Reject</a>`;
+                 html += "</td>"; 
+                 
+                 html += "</tr>"; 
+             }
+             
+             html += "</tbody></table>"; 
+             $container.html(html);
+         },
+         error: function(xhr, status, error) {
+             console.error("Error loading requests:", status, error);
+             $container.html('<p class="text-center text-danger">Failed to load requests. Please check the console.</p>');
+         }
+         });
         }
 
         function timeDisplay(totalSeconds) {
@@ -84,5 +174,49 @@
 
             return parts.join(' ');
         }
+
+      function updateRequestBadge(count) {
+            const $badge = $('#request-badge');
+            if (count > 0) {
+                $badge.removeClass('hidden');
+                // Optional: You could show the actual count here: $badge.text(count);
+            } else {
+                $badge.addClass('hidden');
+            }
+        }
     </script>
+
+<style>
+     /* Table Header Visibility Fix */
+    .table thead th {
+        color: white !important; 
+    }
+
+    /* Red Dot Styling */
+    .notification-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 8px; /* Adjusted size */
+        height: 8px; /* Adjusted size */
+        border-radius: 50%;
+        background-color: red;
+        z-index: 10;
+        border: 1px solid white;
+        
+        /* Positioning trick: Shift it relative to its own size to sit exactly on the corner */
+        transform: translate(50%, -50%); 
+    }
+
+    /* Fix to anchor the badge to the icon itself */
+    .top-right-icon button i, .d-flex button i {
+        position: relative; /* Ensure the badge positions correctly */
+        display: inline-block;
+        padding: 0 5px; 
+    }
+
+    .hidden {
+        display: none;
+    }
+</style>
 }

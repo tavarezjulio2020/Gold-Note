@@ -159,3 +159,21 @@ button.accept-policy {
     padding: 8px 16px;
     cursor: pointer;
 }
+
+.notification-badge {
+   position: absolute;
+   top: 5px; /* Adjust vertical position */
+   right: 5px; /* Adjust horizontal position */
+   width: 10px;
+   height: 10px;
+   border-radius: 50%; /* Makes it a circle */
+   background-color: red;
+   z-index: 10;
+   /* Optional: Small white border for contrast */
+   border: 1px solid white;
+}
+
+/* Class to hide the badge by default or when count is zero */
+.hidden {
+   display: none;
+}
