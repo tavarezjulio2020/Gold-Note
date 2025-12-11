@@ -363,5 +363,181 @@ namespace GoldNote.Models.Teacher
             return cmd.ExecuteNonQuery();
         }
 
+
+
+
+
+
+
+
+        //cesar work HERE
+        // 1. GET Assignments (Using your specific SQL script)
+        public List<AssignmentDetails> GetAssignments(int studentLearnId)
+        {
+            List<AssignmentDetails> list = new List<AssignmentDetails>();
+
+            // Note: I corrected 'desctription' to 'description' assuming it was a typo, 
+            // but if your column is actually named 'desctription', please change it back below!
+            string sql = @"
+        SELECT 
+            a.assignment_id,
+            a.title,
+            a.desctription, -- Ensure this matches your DB column name
+            (SELECT COUNT(*) FROM practiced_assignments pa 
+             JOIN practice p ON p.practice_id = pa.practice_id
+             WHERE pa.assignment_id = a.assignment_id 
+             AND p.startTime > DATEADD(DAY, -7, GETDATE())) as PracticeCount
+        FROM assignment a
+        JOIN assigned_assignments aa ON aa.assignment_id = a.assignment_id
+        JOIN learn_instrument li ON li.learn_id = aa.learn_id
+        WHERE li.learn_id = @LearnId
+        ORDER BY a.title DESC";
+
+            using (var con = new SqlConnection(_connectionString))
+            using (var cmd = new SqlCommand(sql, con))
+            {
+                cmd.Parameters.AddWithValue("@LearnId", studentLearnId);
+                con.Open();
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        list.Add(new AssignmentDetails
+                        {
+                            AssignmentId = Convert.ToInt32(reader["assignment_id"]),
+                            Title = reader["title"].ToString(),
+                            // Mapping 'desctription' column to TeacherNotes property
+                            TeacherNotes = reader["desctription"] != DBNull.Value ? reader["desctription"].ToString() : "",
+                            TimesPracticedThisWeek = reader["PracticeCount"] != DBNull.Value ? Convert.ToInt32(reader["PracticeCount"]) : 0
+                        });
+                    }
+                }
+            }
+            return list;
+        }
+
+        // 2. ADD Assignment (Needs to insert into TWO tables now)
+        public void AddAssignment(int studentLearnId, string title, string notes)
+        {
+            using (var con = new SqlConnection(_connectionString))
+            {
+                con.Open();
+                using (var transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        // Step 1: Insert the Assignment and get the new ID
+                        string insertAssignSql = @"
+                    INSERT INTO assignment (title, desctription) 
+                    OUTPUT INSERTED.assignment_id
+                    VALUES (@Title, @Notes)";
+
+                        int newAssignmentId;
+
+                        using (var cmd = new SqlCommand(insertAssignSql, con, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Title", title);
+                            cmd.Parameters.AddWithValue("@Notes", notes ?? (object)DBNull.Value);
+                            newAssignmentId = (int)cmd.ExecuteScalar();
+                        }
+
+                        // Step 2: Link it to the student in assigned_assignments
+                        string insertLinkSql = @"
+                    INSERT INTO assigned_assignments (assignment_id, learn_id) 
+                    VALUES (@AssignId, @LearnId)";
+
+                        using (var cmd = new SqlCommand(insertLinkSql, con, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@AssignId", newAssignmentId);
+                            cmd.Parameters.AddWithValue("@LearnId", studentLearnId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw; // Re-throw to handle in controller
+                    }
+                }
+            }
+        }
+
+        // 3. EDIT Assignment (Updates the main assignment table)
+        public int UpdateAssignment(int assignmentId, string title, string notes)
+        {
+            string sql = @"UPDATE assignment 
+                   SET title = @Title, desctription = @Notes 
+                   WHERE assignment_id = @AssignmentId";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@AssignmentId", assignmentId);
+            cmd.Parameters.AddWithValue("@Title", title);
+            cmd.Parameters.AddWithValue("@Notes", notes ?? (object)DBNull.Value);
+
+            con.Open();
+            return cmd.ExecuteNonQuery();
+        }
+
+        // 4. DELETE Assignment (Must delete links first to avoid foreign key errors)
+        public void DeleteAssignment(int assignmentId)
+        {
+            using (var con = new SqlConnection(_connectionString))
+            {
+                con.Open();
+                using (var transaction = con.BeginTransaction())
+                {
+                    try
+                    {
+                        // Step 1: Delete from practiced_assignments (if history exists)
+                        string delPracticeSql = "DELETE FROM practiced_assignments WHERE assignment_id = @Id";
+                        using (var cmd = new SqlCommand(delPracticeSql, con, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", assignmentId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Step 2: Delete from assigned_assignments (the link to student)
+                        string delLinkSql = "DELETE FROM assigned_assignments WHERE assignment_id = @Id";
+                        using (var cmd = new SqlCommand(delLinkSql, con, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", assignmentId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // Step 3: Delete the actual assignment
+                        string delAssignSql = "DELETE FROM assignment WHERE assignment_id = @Id";
+                        using (var cmd = new SqlCommand(delAssignSql, con, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", assignmentId);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 }

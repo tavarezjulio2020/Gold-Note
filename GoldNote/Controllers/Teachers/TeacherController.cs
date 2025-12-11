@@ -117,5 +117,44 @@ namespace GoldNote.Controllers.Teachers
         }
 
 
+
+
+
+
+
+
+
+
+
+        //cesar work HERE
+        [HttpPost]
+        public IActionResult AddAssignment(int learnId, string title, string notes)
+        {
+            try
+            {
+                _t.AddAssignment(learnId, title, notes);
+                return Ok(new { message = "Assignment added!" });
+            }
+            catch
+            {
+                return BadRequest(new { message = "Failed to add assignment." });
+            }
+        }
+
+        [HttpDelete]
+        public IActionResult DeleteAssignment(int assignmentId)
+        {
+            try
+            {
+                _t.DeleteAssignment(assignmentId);
+                return Ok(new { message = "Assignment deleted." });
+            }
+            catch
+            {
+                return BadRequest(new { message = "Delete failed." });
+            }
+        }
+
+
     }
 }

@@ -19,19 +19,22 @@
 </div>
 
 
-<table class="table table-hover student-list-table">
-    <thead>
-        <tr>
-            <th>Student Name</th>
-            <th>Instrument</th>
-            <th>Practice time This Week </th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody id="studentTableBody">
-
-    </tbody>
-</table>
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Instrument</th>
+                    <th>Practice (Total)</th>
+                    <th>Assignments</th> 
+                </tr>
+            </thead>
+            <tbody id="studentTableBody">
+                </tbody>
+        </table>
+    </div>
+</div>
 
 <div class="modal fade" id="RequestModal" tabindex="-1" aria-labelledby="RequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -49,13 +52,53 @@
     </div>
 </div>
 
+<div class="modal fade" id="AssignmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="assignmentModalTitle">Assignments for [Student Name]</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <div id="assignmentListContainer" class="mb-4">
+                    </div>
+
+                <hr />
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="fas fa-plus-circle"></i> Add New Assignment</h6>
+                        <form id="addAssignmentForm">
+                            <input type="hidden" id="currentStudentLearnId" />
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="newTitle" placeholder="Assignment Title" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <textarea class="form-control" id="newNotes" placeholder="Notes/Description..."></textarea>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-success w-100">Add Assignment</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script>
         $(document).ready(function () {
             
            getStudents();
-            checkInitialRequests();
+           checkInitialRequests();
             
             $('#RequestModal').on('show.bs.modal', function (e) {
                 loadRequests();
