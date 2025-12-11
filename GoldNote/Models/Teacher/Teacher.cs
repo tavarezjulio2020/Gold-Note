@@ -7,6 +7,7 @@ using NuGet.Protocol.Plugins;
 using Azure.Core;
 using GoldNote.Data;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using GoldNote.Models.Student;
 
 namespace GoldNote.Models.Teacher
 {
@@ -55,22 +56,24 @@ namespace GoldNote.Models.Teacher
             string sql = @"Select s.profile_id,
                                   s.name,
                                   i.inst_name,
-                                  SUM(practice.seconds) AS 'PracticedTime'
-                           from profile s
-                           join learn_instrument li 
-                                on li.person_id = s.profile_id
-                           join instruments i 
-                                on i.inst_id = li.instrument_id
-                           join practice 
-                                ON practice.learn_id = li.learn_id
-                           join studentInClass sic 
-                                ON sic.student_instrument_id= li.learn_id
-                           join classRoom cri 
-                                ON cri.classRoom_id = sic.classroom_id
-                           join profile t 
-                                ON t.profile_id = cri.teacher_id
-                           Where t.profile_id = @userId and practice.startTime > DATEADD(DAY, -7, GETDATE())
-                           GROUP BY s.profile_id, s.name, i.inst_name
+                                  -- Logic: If they practiced in last 7 days, sum it. Otherwise 0.
+                                  ISNULL(SUM(CASE WHEN practice.startTime > DATEADD(DAY, -7, GETDATE()) 
+                                                  THEN practice.seconds 
+                                                  ELSE 0 
+                                             END), 0) AS 'PracticedTime'
+                              FROM profile s
+                              JOIN learn_instrument li ON li.person_id = s.profile_id
+                              JOIN instruments i ON i.inst_id = li.instrument_id
+                              JOIN studentInClass sic ON sic.student_instrument_id = li.learn_id
+                              JOIN classRoom cri ON cri.classRoom_id = sic.classroom_id
+                              JOIN profile t ON t.profile_id = cri.teacher_id
+                              
+                              -- CHANGED TO LEFT JOIN: Keeps students even if they haven't practiced
+                              LEFT JOIN practice ON practice.learn_id = li.learn_id
+
+                              WHERE t.profile_id = @userId
+                              
+                              GROUP BY s.profile_id, s.name, i.inst_name
             ";
             using var con = new SqlConnection(_connectionString);
             using var cmd = new SqlCommand(sql, con);
@@ -211,10 +214,9 @@ namespace GoldNote.Models.Teacher
                     try
                     {
                         // --- STEP A: Create the Classroom (Uses GUID) ---
-                        string sqlClassroom = @" 
-                    INSERT INTO classRoom (classRoom_Name, join_Code, teacher_id)
-                    VALUES (@ClassroomName, @JoinCode, @TeacherId);
-                ";
+                        string sqlClassroom = @"  INSERT INTO classRoom (classRoom_Name, join_Code, teacher_id)
+                                                  VALUES (@ClassroomName, @JoinCode, @TeacherId);
+                        ";
                         using (var cmdClass = new SqlCommand(sqlClassroom, con, transaction))
                         {
                             cmdClass.Parameters.AddWithValue("@ClassroomName", classroomName);
@@ -224,12 +226,12 @@ namespace GoldNote.Models.Teacher
                         }
 
                         // --- STEP B: Assign Role ID 2 (Teacher) - NOW USES INT ID ---
-                        string sqlRole = @"
-                    IF NOT EXISTS (SELECT 1 FROM profile_Role WHERE account_id = @AccountId AND role_id = 2)
-                    BEGIN
-                        INSERT INTO profile_Role (account_id, role_id)
-                        VALUES (@AccountId, 2);
-                    END";
+                        string sqlRole = @" IF NOT EXISTS (SELECT 1 FROM profile_Role WHERE account_id = @AccountId AND role_id = 2)
+                                            BEGIN
+                                                INSERT INTO profile_Role (account_id, role_id)
+                                                VALUES (@AccountId, 2);
+                                            END
+                        ";
 
                         using (var cmdRole = new SqlCommand(sqlRole, con, transaction))
                         {
@@ -297,6 +299,68 @@ namespace GoldNote.Models.Teacher
                 });
             }
             return data;
+        }
+
+        public int GetClassID(string teacherID)
+        {
+            string sql = @"SELECT classRoom_id
+                   FROM classRoom
+                   Where teacher_id = @teacherID
+            ";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@teacherID", teacherID);
+
+            con.Open();
+
+            object result = cmd.ExecuteScalar();
+
+            if (result != null)
+            {
+                int classId = Convert.ToInt32(result);
+                return classId;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
+        // Recommended changes for your utility/repository methods:
+
+        public int AcceptStudentWithInstrumnet(int classRoomId, int studentLearnId)
+        {
+            string sql = @"INSERT INTO studentInClass (classroom_id, student_instrument_id)
+                       VALUES (@classRoomId, @student)";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@classRoomId", classRoomId);
+            cmd.Parameters.AddWithValue("@student", studentLearnId);
+
+            con.Open();
+
+            // Executes the command and returns the number of rows affected (should be 1 on success)
+            return cmd.ExecuteNonQuery();
+        }
+
+        public int DeleteRequest(int requestId)
+        {
+            string sql = @"DELETE FROM classRoomrequest
+                       WHERE crrID = @requestId";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@requestId", requestId);
+
+            con.Open();
+
+            // Executes the command and returns the number of rows affected (should be 1 on success)
+            return cmd.ExecuteNonQuery();
         }
 
     }

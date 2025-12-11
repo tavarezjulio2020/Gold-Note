@@ -53,12 +53,58 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
-            getStudents();
+            
+           getStudents();
             checkInitialRequests();
+            
             $('#RequestModal').on('show.bs.modal', function (e) {
                 loadRequests();
             });
+
+            $(document).on('click', '.accept-btn', function() {
+                var requestId = $(this).data('request-id');
+                var studentLearnId = $(this).data('student-learn-id');
+                processRequest(requestId, studentLearnId, 'Acceptrequest');
+            });
+            
+            $(document).on('click', '.reject-btn', function() {
+                var requestId = $(this).data('request-id');
+                // Note: For reject, we don't need studentLearnId, so we pass null/0
+                processRequest(requestId, 0, 'Rejectrequest'); 
+            });
+
         });
+
+        // A single function to handle both accept (POST) and reject (DELETE) logic
+        function processRequest(requestId, studentLearnId, actionName) {
+            
+            // Determine the HTTP verb based on the action being performed
+            let httpVerb = 'POST';
+            if (actionName === 'Rejectrequest') {
+                httpVerb = 'DELETE'; 
+            }
+            
+            $.ajax({
+                url: '/Teacher/' + actionName, 
+                type: httpVerb, 
+                dataType: 'json',
+                data: { 
+                    requestId: requestId,
+                    studentLearnId: studentLearnId 
+                },
+                success: function(response) {
+                    alert(response.message);  
+                    loadRequests();  
+                    getStudents();  
+                    checkInitialRequests(); 
+                },
+                error: function(xhr, status, error) {
+                    var response = xhr.responseJSON;
+                    var errorMessage = response ? response.message : "An unexpected error occurred.";
+                    alert("Error: " + errorMessage); 
+                }
+            });
+        }
 
         function checkInitialRequests() {
             $.ajax({
@@ -97,50 +143,49 @@
            });
         }
 
-      function loadRequests() {
-         var $container = $('#requestsContainer');
-         $container.html('<p class="text-center text-muted">Loading requests...</p>'); 
-
-         $.ajax({
-         url: '/Teacher/GetJoinRequest', // ✅ Correct URL as confirmed
-         dataType: 'json',
-         type: 'GET',
-         success: function(data) {
-            console.log('Request to join class', data);
+        function loadRequests() { 
+           var $container = $('#requestsContainer');
+           $container.html('<p class="text-center text-muted">Loading requests...</p>'); 
+            $.ajax({
+               url: '/Teacher/GetJoinRequest', // ✅ Correct URL as confirmed
+               dataType: 'json',
+               type: 'GET',
+               success: function(data) {
+                  console.log('Request to join class', data);
             
-            if (data.length === 0) {
-                $container.html('<p class="text-center text-muted">No new classroom requests currently pending.</p>');
-                return;
-            }
+                  if (data.length === 0) {
+                      $container.html('<p class="text-center text-muted">No new classroom requests currently pending.</p>');
+                      return;
+                  }
 
-            // Start building a proper HTML table with headers
-            var html = '<table class="table table-hover table-sm">';
-            html += '<thead><tr><th>Student</th><th>Instrument</th><th>Actions</th></tr></thead>';
-            html += '<tbody>'; 
-            
-            for(let i = 0; i < data.length; i++){
-                var request = data[i];  
-                 html += "<tr>"; 
-                 html += "<td>" + request.studentName + "</td>"; 
-                 html += "<td>" + request.instrumentName + "</td>";  
-                 var requestId = request.requestId; 
-                 
-                 html += "<td>"; 
-                 html += `<a href="/Teacher/AcceptRequest?requestId=${requestId}" class="btn btn-success btn-sm me-2">Accept</a>`; 
-                 html += `<a href="/Teacher/RejectRequest?requestId=${requestId}" class="btn btn-danger btn-sm">Reject</a>`;
-                 html += "</td>"; 
-                 
-                 html += "</tr>"; 
-             }
-             
-             html += "</tbody></table>"; 
-             $container.html(html);
-         },
-         error: function(xhr, status, error) {
-             console.error("Error loading requests:", status, error);
-             $container.html('<p class="text-center text-danger">Failed to load requests. Please check the console.</p>');
-         }
-         });
+                  // Start building a proper HTML table with headers
+                  var html = '<table class="table table-hover table-sm">';
+                  html += '<thead><tr><th>Student</th><th>Instrument</th><th>Actions</th></tr></thead>';
+                  html += '<tbody>'; 
+                  
+                  for(let i = 0; i < data.length; i++){
+                      var request = data[i];  
+                      html += "<tr>"; 
+                      html += "<td>" + request.studentName + "</td>"; 
+                      html += "<td>" + request.instrumentName + "</td>";  
+                      var requestId = request.requestId;  
+
+                      html += "<td>"; 
+                      var studentLearnId = request.learnId;
+                       
+                      html += `<button type="button" class="btn btn-success btn-sm me-2 accept-btn" data-request-id="${requestId}" data-student-learn-id="${studentLearnId}">Accept</button>`;
+                      html += `<button type="button" class="btn btn-danger btn-sm reject-btn" data-request-id="${requestId}">Reject</button>`;
+                      html += "</td>"; 
+                      html += "</tr>";
+                  }
+                  html += "</tbody></table>"; 
+                  $container.html(html);
+               },
+               error: function(xhr, status, error) {
+                  console.error("Error loading requests:", status, error);
+                  $container.html('<p class="text-center text-danger">Failed to load requests. Please check the console.</p>');
+               }
+            });
         }
 
         function timeDisplay(totalSeconds) {

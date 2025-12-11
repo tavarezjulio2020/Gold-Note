@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GoldNote.Models.Teacher;
+using Azure.Core;
 
 
 namespace GoldNote.Controllers.Teachers
@@ -42,10 +43,10 @@ namespace GoldNote.Controllers.Teachers
 
             var students = _t.getMyStudents(teacherId);
 
-            return Json(students);                                     
+            return Json(students);
         }
 
-        [HttpGet] 
+        [HttpGet]
         public IActionResult GetJoinRequest()
         {
             // Implementation for fetching and returning student data as JSON
@@ -55,5 +56,66 @@ namespace GoldNote.Controllers.Teachers
 
             return Json(students);
         }
+
+        [HttpPost] // Keep as POST for safer, non-idempotent operation
+        public IActionResult Acceptrequest(int studentLearnId, int requestId)
+        {
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            int classRoomId = _t.GetClassID(teacherId);
+            if (classRoomId == 0)
+            {
+                // This is a correct return for an AJAX failure
+                return BadRequest(new { success = false, message = "Unable to find class ID for teacher." });
+            }
+
+            // Capture the result (number of rows affected)
+            int rowsAffected = _t.AcceptStudentWithInstrumnet(classRoomId, studentLearnId);
+
+            // Check for success (1 row should be inserted)
+            if (rowsAffected > 0)
+            {
+                // Delete the request and check that it was deleted
+                int requestsDeleted = _t.DeleteRequest(requestId);
+
+                // Return a successful JSON response
+                return Ok(new
+                {
+                    success = true,
+                    message = "Student accepted and request deleted.",
+                    requestsDeleted = requestsDeleted
+                });
+            }
+            else
+            {
+                // Return a failure JSON response if the insert failed
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to add student to the class.",
+                    studentLearnId = studentLearnId // Optional: debugging info
+                });
+            }
+        }
+        [HttpDelete]
+        public IActionResult Rejectrequest(int requestID)
+        {
+            int requestsDeleted = _t.DeleteRequest(requestID);
+            if (requestsDeleted > 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Student denied admition"
+                });
+            }
+            return BadRequest(new
+            {
+                success = false,
+                message = "Failed to deny admition."
+            });
+        }
+
+
     }
 }
