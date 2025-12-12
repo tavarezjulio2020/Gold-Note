@@ -218,10 +218,10 @@
                     $.each(data, function (i, student) {
                         // Main Row
                         html += `<tr data-learn-id="${student.learnId}">`;
-                        html += `<td>${student.studentName}</td>`;
-                        html += `<td>${student.instrumentName}</td>`;
-                        html += `<td>${timeDisplay(student.secondsPracticed)}</td>`;
-                        html += `<td><button class="btn btn-sm btn-info toggle-assignments-btn" data-learn-id="${student.learnId}">Show Assignments</button></td>`;
+                        html += `<td class="text-center">${student.studentName}</td>`;
+                        html += `<td class="text-center">${student.instrumentName}</td>`;
+                        html += `<td class="text-center">${timeDisplay(student.secondsPracticed)}</td>`;
+                        html += `<td class="text-center"><button class="btn btn-sm btn-info toggle-assignments-btn" data-learn-id="${student.learnId}">Show Assignments</button></td>`;
                         html += `</tr>`; 
                         html += `<tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">`;
                         html += `<td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>`;
@@ -282,22 +282,25 @@
         }
 
         function renderAssignmentsTable(assignments, learnId) {
-            // UPDATED: Dark Theme Structure
             let html = `
                 <div class="card border-secondary">
-                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #111; border-bottom: 1px solid #444;">
-                        <span class="h5 m-0" style="color: #FFD700;">Assignments</span>
-                        <button class="btn btn-outline-warning btn-sm add-assignment-modal-btn" data-learn-id="${learnId}">
-                            <i class="fas fa-plus"></i> Add New
-                        </button>
+                    <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
+
+                        <span class="h5 m-0 position-absolute top-50 start-50 translate-middle" style="color: #FFD700;">Assignments</span>
+
+                        <div class="w-100 d-flex justify-content-end">
+                            <button class="btn btn-outline-warning btn-sm add-assignment-modal-btn" data-learn-id="${learnId}">
+                                <i class="fas fa-plus"></i> Add New
+                            </button>
+                        </div>
                     </div>
 
-                    <table class="table table-dark table-hover table-sm mb-0">
+                    <table class="table table-dark table-hover table-sm mb-0 align-middle">
                         <thead>
                             <tr style="border-bottom: 2px solid #444;">
-                                <th style="width: 30%; color: #FFD700 !important;">Title</th>
-                                <th style="width: 50%; color: #FFD700 !important;">Description</th>
-                                <th style="width: 20%; color: #FFD700 !important;">Actions</th>
+                                <th class="text-center" style="width: 30%; color: #FFD700 !important;">Title</th>
+                                <th class="text-center" style="width: 50%; color: #FFD700 !important;">Description</th> @* Centered Header *@
+                                <th class="text-center" style="width: 20%; color: #FFD700 !important;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -308,9 +311,9 @@
                     const safeDesc = $('<div>').text(item.description).html();
 
                     html += `<tr>
-                                <td class="text-white">${safeTitle}</td>
-                                <td class="text-white text-wrap" style="max-width: 0;">${safeDesc}</td>
-                                <td>
+                                <td class="text-white text-center">${safeTitle}</td>
+                                <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
+                                <td class="text-center">
                                     <button class="btn btn-sm btn-outline-primary edit-assignment-btn me-1"
                                         data-assignment-id="${item.assignmentId}"
                                         data-title="${safeTitle}"

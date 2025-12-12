@@ -8,12 +8,43 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/GoldNote.styles.css" asp-append-version="true" />
     <script src="https://kit.fontawesome.com/6bdf13605e.js" crossorigin="anonymous"></script>
+
+    @* --- Footer & Nav Styles --- *@
+    <style>
+        /* 1. THE "ACTIVE PAGE" RULE
+                   This forces ANY button (Blue, Cyan, or Gold) to become Solid Gold
+                   when it is the active page. */
+        .btn.active-page {
+            background-color: #FFD700 !important; /* Gold Background */
+            color: black !important; /* Black Text */
+            border-color: #FFD700 !important; /* Gold Border */
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4); /* Soft Glow */
+        }
+
+        /* 2. Custom Gold Outline (Replacing the Green Practice Button) */
+        .btn-outline-gold {
+            color: #FFD700;
+            border: 1px solid #FFD700;
+            background-color: transparent;
+        }
+
+            .btn-outline-gold:hover {
+                background-color: #FFD700;
+                color: black;
+            }
+
+        /* Optional: Spacing between buttons */
+        footer .btn {
+            margin: 0 5px;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm **navbar-dark bg-secondary-dark** mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-secondary-dark mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand **gold-brand**" asp-area="" asp-controller="Home" asp-action="Index">GoldNote</a>
+                <a class="navbar-brand gold-brand" asp-area="" asp-controller="Home" asp-action="Index">GoldNote</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -30,27 +61,38 @@
 
     <footer class="border-top footer text-muted">
         <div class="container text-center" style="background-color: black">
+
+            @* --- Razor Logic to detect current page --- *@
+            @{
+                var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+            }
+
             <div style="width:100%" class="btn-group mt-2 mb-2" role="group" aria-label="Footer Navigation">
 
-                <a class="btn btn-outline-primary" asp-area="" asp-controller="Home" asp-action="Index">
+                @* 1. Home Button (Blue Outline normally) *@
+                <a class="btn btn-outline-info @(currentController == "Home" ? "active-page" : "")"
+                   asp-area="" asp-controller="Home" asp-action="Index">
                     Home
                 </a>
 
-                <a class="btn btn-outline-success" asp-area="" asp-controller="Practice" asp-action="Index">
+                @* 2. Practice Button (Gold Outline normally - Replaced Green) *@
+                <a class="btn btn-outline-gold @(currentController == "Practice" ? "active-page" : "")"
+                   asp-area="" asp-controller="Practice" asp-action="Index">
                     Practice
                 </a>
 
+                @* 3. Teacher Button (Cyan/Info Outline normally) *@
                 @if (User.IsInRole("Teacher"))
                 {
-                    // Scenario 1: User IS a Teacher
-                    // Button takes them to the teacher dashboard
-                    <a class="btn btn-outline-info" asp-area="" asp-controller="Teacher" asp-action="Teacher_index">
+                    <a class="btn btn-outline-info @(currentController == "Teacher" ? "active-page" : "")"
+                       asp-area="" asp-controller="Teacher" asp-action="Teacher_index">
                         Teacher
                     </a>
                 }
                 else
                 {
-                    <a class="btn btn-outline-info" asp-area="" asp-controller="Subscription" asp-action="Subscription">
+                    <a class="btn btn-outline-info @(currentController == "Subscription" ? "active-page" : "")"
+                       asp-area="" asp-controller="Subscription" asp-action="Subscription">
                         Teacher
                     </a>
                 }
