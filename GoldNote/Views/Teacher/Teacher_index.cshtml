@@ -1,13 +1,11 @@
-﻿@* Teacher_index.cshtml (Updated Structure) *@
+﻿@* Teacher_index.cshtml *@
 @* Assuming this view receives List<StudentDashboardItem> as its Model *@
 
 <div class="text-center">
     <h1 class="display-4 gold">@ViewBag.Username</h1>
-    
+
     <div class="d-flex justify-content-center align-items-center mb-4">
-        
         <h2 class="m-0 me-3">Class Code: @ViewBag.ClassCode.ClassCode</h2>
-        
         <div style="position: relative;">
             <button type="button" class="btn btn-lg" data-bs-toggle="modal" data-bs-target="#RequestModal" style="color: white; padding: 0.5rem;">
                 <i class="fas fa-envelope" style="position: relative;">
@@ -18,24 +16,30 @@
     </div>
 </div>
 
+@* Hidden Anti-Forgery Token for AJAX calls *@
+@Html.AntiForgeryToken()
 
 <div class="row">
     <div class="col-md-10 offset-md-1">
-        <table class="table table-hover table-striped">
-            <thead>
-                <tr>
-                    <th>Student</th>
-                    <th>Instrument</th>
-                    <th>Practice (Total)</th>
-                    <th>Assignments</th> 
-                </tr>
-            </thead>
-            <tbody id="studentTableBody">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+                <thead class="text-center">
+                    <tr>
+                        <th>Student</th>
+                        <th>Instrument</th>
+                        <th>Practice (Total)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                    @* Populated via AJAX *@
                 </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 
+@* --- MODAL FOR CLASSROOM REQUESTS --- *@
 <div class="modal fade" id="RequestModal" tabindex="-1" aria-labelledby="RequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -45,48 +49,74 @@
             </div>
             <div class="modal-body">
                 <div id="requestsContainer">
-                    <p class="text-center text-muted">Loading requests...</p>
+                    <div class="text-center my-3">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="text-muted mt-2">Loading requests...</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="AssignmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+@* --- MODAL FOR EDITING ASSIGNMENTS --- *@
+<div class="modal fade" id="EditAssignmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="assignmentModalTitle">Assignments for [Student Name]</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
+            <form id="editAssignmentForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color:black">Edit Assignment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editAssignmentId" name="assignmentId">
 
-                <div id="assignmentListContainer" class="mb-4">
+                    <div class="mb-3">
+                        <label for="editTitle" style="color:black" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="editTitle" name="title" style="color:black" required>
                     </div>
 
-                <hr />
-
-                <div class="card bg-light">
-                    <div class="card-body">
-                        <h6 class="card-title"><i class="fas fa-plus-circle"></i> Add New Assignment</h6>
-                        <form id="addAssignmentForm">
-                            <input type="hidden" id="currentStudentLearnId" />
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" class="form-control" id="newTitle" placeholder="Assignment Title" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <textarea class="form-control" id="newNotes" placeholder="Notes/Description..."></textarea>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-success w-100">Add Assignment</button>
-                                </div>
-                            </div>
-                        </form>
+                    <div class="mb-3">
+                        <label for="editDescription" style="color:black" class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" name="description" rows="3" style="color:black" required></textarea>
                     </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-            </div>
+@* --- MODAL FOR ADDING ASSIGNMENTS --- *@
+<div class="modal fade" id="AddAssignmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="addAssignmentForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color:black">Add New Assignment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="addAssignmentLearnId" name="learnId">
+
+                    <div class="mb-3">
+                        <label for="addTitle" class="form-label" style="color:black">Title</label>
+                        <input type="text" class="form-control" id="addTitle" name="title" style="color: black" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="addDescription" class="form-label" style="color:black">Description</label>
+                        <textarea class="form-control" id="addDescription" name="description" rows="3" style="color: black" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add Assignment</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -96,215 +126,352 @@
 
     <script>
         $(document).ready(function () {
-            
-           getStudents();
-           checkInitialRequests();
-            
-            $('#RequestModal').on('show.bs.modal', function (e) {
+            // --- SECURITY: Setup AJAX to send Anti-Forgery Token ---
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $.ajaxSetup({
+                headers: {
+                    'RequestVerificationToken': token
+                }
+            });
+
+            // Initial Loads
+            getStudents();
+            checkInitialRequests();
+
+            // --- Event Handlers ---
+
+            $('#RequestModal').on('show.bs.modal', function () {
                 loadRequests();
             });
 
-            $(document).on('click', '.accept-btn', function() {
+            // Request Actions (Delegated)
+            $(document).on('click', '.accept-btn', function () {
                 var requestId = $(this).data('request-id');
                 var studentLearnId = $(this).data('student-learn-id');
                 processRequest(requestId, studentLearnId, 'Acceptrequest');
             });
-            
-            $(document).on('click', '.reject-btn', function() {
+
+            $(document).on('click', '.reject-btn', function () {
                 var requestId = $(this).data('request-id');
-                // Note: For reject, we don't need studentLearnId, so we pass null/0
-                processRequest(requestId, 0, 'Rejectrequest'); 
+                processRequest(requestId, 0, 'Rejectrequest');
+            }); 
+
+            // Open Edit Modal
+            $(document).on('click', '.edit-assignment-btn', function () {
+                var assignmentId = $(this).data('assignment-id');
+                var title = $(this).data('title');
+                var description = $(this).data('description');
+
+                $('#editAssignmentId').val(assignmentId);
+                $('#editTitle').val(title);
+                $('#editDescription').val(description);
+
+                var editModal = new bootstrap.Modal(document.getElementById('EditAssignmentModal'));
+                editModal.show();
             });
 
+            // Submit Edit Form
+            $('#editAssignmentForm').on('submit', function (e) {
+                e.preventDefault();
+                var id = $('#editAssignmentId').val();
+                var title = $('#editTitle').val();
+                var desc = $('#editDescription').val();
+                editAssignment(id, title, desc);
+            });
+
+            // Delete Assignment
+            $(document).on('click', '.delete-assignment-btn', function () {
+                var assignmentId = $(this).data('assignment-id');
+                deleteAssignment(assignmentId); 
+            });
+
+            // Open Add Modal
+            $(document).on('click', '.add-assignment-modal-btn', function () {
+                var learnId = $(this).data('learn-id');
+                $('#addAssignmentLearnId').val(learnId);
+                $('#addTitle').val('');
+                $('#addDescription').val('');
+
+                var addModal = new bootstrap.Modal(document.getElementById('AddAssignmentModal'));
+                addModal.show();
+            });
+
+            // Submit Add Form
+            $('#addAssignmentForm').on('submit', function (e) {
+                e.preventDefault();
+                var learnId = $('#addAssignmentLearnId').val();
+                var title = $('#addTitle').val();
+                var desc = $('#addDescription').val();
+                addAssignment(learnId, title, desc);
+            });
         });
 
-        // A single function to handle both accept (POST) and reject (DELETE) logic
-        function processRequest(requestId, studentLearnId, actionName) {
-            
-            // Determine the HTTP verb based on the action being performed
-            let httpVerb = 'POST';
-            if (actionName === 'Rejectrequest') {
-                httpVerb = 'DELETE'; 
-            }
-            
+        // --- Functions ---
+
+        function getStudents() {
             $.ajax({
-                url: '/Teacher/' + actionName, 
-                type: httpVerb, 
+                url: '/Teacher/GetMyStudents',
+                type: 'GET',
                 dataType: 'json',
-                data: { 
-                    requestId: requestId,
-                    studentLearnId: studentLearnId 
-                },
-                success: function(response) {
-                    alert(response.message);  
-                    loadRequests();  
-                    getStudents();  
-                    checkInitialRequests(); 
-                },
-                error: function(xhr, status, error) {
-                    var response = xhr.responseJSON;
-                    var errorMessage = response ? response.message : "An unexpected error occurred.";
-                    alert("Error: " + errorMessage); 
+                success: function (data) {
+                    var html = "";
+                    $.each(data, function (i, student) {
+                        // Main Row
+                        html += `<tr data-learn-id="${student.learnId}">`;
+                        html += `<td>${student.studentName}</td>`;
+                        html += `<td>${student.instrumentName}</td>`;
+                        html += `<td>${timeDisplay(student.secondsPracticed)}</td>`;
+                        html += `<td><button class="btn btn-sm btn-info toggle-assignments-btn" data-learn-id="${student.learnId}">Show Assignments</button></td>`;
+                        html += `</tr>`; 
+                        html += `<tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">`;
+                        html += `<td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>`;
+                        html += `</tr>`;
+                    });
+
+                    $('#studentTableBody').html(html); 
+                    $('.toggle-assignments-btn').on('click', function () {
+                        var learnId = $(this).data('learn-id');
+                        var $row = $(`.assignment-row-${learnId}`);
+
+                        if ($row.is(':hidden')) {
+                            getAssignments(learnId);
+                            $(this).text('Hide Assignments').removeClass('btn-info').addClass('btn-secondary');
+                        } else {
+                            $(this).text('Show Assignments').removeClass('btn-secondary').addClass('btn-info');
+                        }
+                        $row.toggle();
+                    });
                 }
+            });
+        }
+
+        function getAssignments(learnId) {
+            var $container = $('#assignments-container-' + learnId);
+            $container.html('<div class="text-center text-white"><i class="fas fa-spinner fa-spin"></i> Loading...</div>');
+
+            $.ajax({
+                url: '/Teacher/GetAssignments',
+                data: { studentLearnId: learnId },
+                type: 'GET',
+                success: function (data) {
+                    $container.html(renderAssignmentsTable(data, learnId));
+                },
+                error: function (xhr) { 
+                    var errorMsg = "Unknown error";
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    } else if (xhr.responseText) {
+                        errorMsg = xhr.responseText;
+                    } 
+                    let html = `
+                        <div class="card border-danger">
+                            <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white">
+                                <span>Error Loading Assignments</span>
+                                <button class="btn btn-light btn-sm add-assignment-modal-btn" data-learn-id="${learnId}">
+                                    <i class="fas fa-plus"></i> Add New
+                                </button>
+                            </div>
+                            <div class="card-body bg-light">
+                                <p class="text-danger m-0"><strong>Error:</strong> ${errorMsg}</p>
+                                <small class="text-muted">Check if your database has the 'creationDate' column.</small>
+                            </div>
+                        </div>`;
+                    $container.html(html);
+                }
+            });
+        }
+
+        function renderAssignmentsTable(assignments, learnId) {
+            // UPDATED: Dark Theme Structure
+            let html = `
+                <div class="card border-secondary">
+                    <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #111; border-bottom: 1px solid #444;">
+                        <span class="h5 m-0" style="color: #FFD700;">Assignments</span>
+                        <button class="btn btn-outline-warning btn-sm add-assignment-modal-btn" data-learn-id="${learnId}">
+                            <i class="fas fa-plus"></i> Add New
+                        </button>
+                    </div>
+
+                    <table class="table table-dark table-hover table-sm mb-0">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #444;">
+                                <th style="width: 30%; color: #FFD700 !important;">Title</th>
+                                <th style="width: 50%; color: #FFD700 !important;">Description</th>
+                                <th style="width: 20%; color: #FFD700 !important;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            if (assignments && assignments.length > 0) {
+                $.each(assignments, function (i, item) {
+                    const safeTitle = $('<div>').text(item.title).html();
+                    const safeDesc = $('<div>').text(item.description).html();
+
+                    html += `<tr>
+                                <td class="text-white">${safeTitle}</td>
+                                <td class="text-white text-wrap" style="max-width: 0;">${safeDesc}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary edit-assignment-btn me-1"
+                                        data-assignment-id="${item.assignmentId}"
+                                        data-title="${safeTitle}"
+                                        data-description="${safeDesc}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-assignment-btn"
+                                        data-assignment-id="${item.assignmentId}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                });
+            } else {
+                html += `<tr><td colspan="3" class="text-center text-muted py-3">No assignments yet. Click "Add New" to start.</td></tr>`;
+            }
+
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function addAssignment(learnId, title, description) {
+            $.ajax({
+                url: '/Teacher/AddAssignment',
+                type: 'POST',
+                data: { learnId: learnId, title: title, description: description },
+                success: function (res) {
+                    $('#AddAssignmentModal').modal('hide');
+                    getAssignments(learnId);
+                },
+                error: function (xhr) { 
+                    var msg = "Unknown error";
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        msg = xhr.responseJSON.error;
+                    } else if (xhr.responseText) {
+                        msg = xhr.responseText;
+                    } 
+                    alert("Error: " + msg);
+                    console.error("Full error:", xhr);
+                }
+            });
+        }
+
+        function editAssignment(id, title, description) {
+            $.ajax({
+                url: '/Teacher/EditAssignment',
+                type: 'PUT',
+                data: { assignmentId: id, title: title, description: description },
+                success: function (res) {
+                    $('#EditAssignmentModal').modal('hide'); 
+                    getStudents(); 
+                },
+                error: function (xhr) { alert("Error editing assignment"); }
+            });
+        }
+
+        function deleteAssignment(id) {
+            $.ajax({
+                url: '/Teacher/DeleteAssignment',
+                type: 'DELETE',
+                data: { assignmentId: id },
+                success: function (res) { 
+                    getStudents();
+                },
+                error: function (xhr) { alert("Error deleting assignment"); }
             });
         }
 
         function checkInitialRequests() {
-            $.ajax({
-                url: '/Teacher/GetJoinRequest', 
-                dataType: 'json',
-                type: 'GET',
-                success: function(data) {
-                    // Update the badge status immediately after fetching the data
-                    updateRequestBadge(data.length); 
-                }
+            $.get('/Teacher/GetJoinRequest', function (data) {
+                var count = data ? data.length : 0;
+                var $badge = $('#request-badge');
+                if (count > 0) $badge.removeClass('hidden');
+                else $badge.addClass('hidden');
             });
         }
 
-        function updateRequestBadge(count) {
-            const $badge = $('#request-badge');
-            if (count > 0) {
-                $badge.removeClass('hidden');
-            } else {
-                $badge.addClass('hidden');
-            }
+        function loadRequests() {
+            var $container = $('#requestsContainer');
+            $container.html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>');
+
+            $.get('/Teacher/GetJoinRequest', function (data) {
+                if (!data || data.length === 0) {
+                    $container.html('<p class="text-center text-muted">No pending requests.</p>');
+                    return;
+                }
+
+                var html = '<table class="table table-hover"><thead><tr><th>Student</th><th>Instrument</th><th>Actions</th></tr></thead><tbody>';
+                $.each(data, function (i, req) {
+                    html += `<tr>
+                                        <td>${req.studentName}</td>
+                                        <td>${req.instrumentName}</td>
+                                        <td>
+                                            <button class="btn btn-success btn-sm accept-btn" data-request-id="${req.requestId}" data-student-learn-id="${req.learnId}">Accept</button>
+                                            <button class="btn btn-danger btn-sm reject-btn" data-request-id="${req.requestId}">Reject</button>
+                                        </td>
+                                   </tr>`;
+                });
+                html += '</tbody></table>';
+                $container.html(html);
+            });
         }
 
-        function getStudents(){
-           $.ajax({
-                     url: '/Teacher/GetMyStudents',
-              datatype:'json',
-              type: 'GET',
-              success: function(data) {
-                 console.log(data);
-                 var html = "";
-                 for(let i=0; i<data.length; i++){
-                    html += "<tr><td>" +data[i].studentName+"</td><td>" + data[i].instrumentName + "</td><td>"+ timeDisplay(data[i].secondsPracticed) +"</td><td> Assingments </td></tr>";
-                 }
-                 $('#studentTableBody').html(html);
-              }
-           });
-        }
-
-        function loadRequests() { 
-           var $container = $('#requestsContainer');
-           $container.html('<p class="text-center text-muted">Loading requests...</p>'); 
+        function processRequest(reqId, learnId, action) {
+            let verb = (action === 'Rejectrequest') ? 'DELETE' : 'POST';
             $.ajax({
-               url: '/Teacher/GetJoinRequest', // ✅ Correct URL as confirmed
-               dataType: 'json',
-               type: 'GET',
-               success: function(data) {
-                  console.log('Request to join class', data);
-            
-                  if (data.length === 0) {
-                      $container.html('<p class="text-center text-muted">No new classroom requests currently pending.</p>');
-                      return;
-                  }
-
-                  // Start building a proper HTML table with headers
-                  var html = '<table class="table table-hover table-sm">';
-                  html += '<thead><tr><th>Student</th><th>Instrument</th><th>Actions</th></tr></thead>';
-                  html += '<tbody>'; 
-                  
-                  for(let i = 0; i < data.length; i++){
-                      var request = data[i];  
-                      html += "<tr>"; 
-                      html += "<td>" + request.studentName + "</td>"; 
-                      html += "<td>" + request.instrumentName + "</td>";  
-                      var requestId = request.requestId;  
-
-                      html += "<td>"; 
-                      var studentLearnId = request.learnId;
-                       
-                      html += `<button type="button" class="btn btn-success btn-sm me-2 accept-btn" data-request-id="${requestId}" data-student-learn-id="${studentLearnId}">Accept</button>`;
-                      html += `<button type="button" class="btn btn-danger btn-sm reject-btn" data-request-id="${requestId}">Reject</button>`;
-                      html += "</td>"; 
-                      html += "</tr>";
-                  }
-                  html += "</tbody></table>"; 
-                  $container.html(html);
-               },
-               error: function(xhr, status, error) {
-                  console.error("Error loading requests:", status, error);
-                  $container.html('<p class="text-center text-danger">Failed to load requests. Please check the console.</p>');
-               }
+                url: '/Teacher/' + action,
+                type: verb,
+                data: { requestId: reqId, studentLearnId: learnId },
+                success: function (res) { 
+                    loadRequests();
+                    getStudents();
+                    checkInitialRequests();
+                },
+                error: function () { alert("Action failed."); }
             });
         }
 
         function timeDisplay(totalSeconds) {
-            // Ensure we start with a positive integer
-            if (typeof totalSeconds !== 'number' || totalSeconds < 0) {
-                return "0s";
-            }
+            if (!totalSeconds || totalSeconds < 0) return "0s";
+            var h = Math.floor(totalSeconds / 3600);
+            var m = Math.floor((totalSeconds % 3600) / 60);
+            var s = Math.floor(totalSeconds % 60);
 
-            var hours;
-            var minutes;
-            var seconds;
-
-            seconds = totalSeconds % 60;
-            var remainingMinutes = Math.floor(totalSeconds / 60); 
-            minutes = remainingMinutes % 60;
-            hours = Math.floor(remainingMinutes / 60); 
             var parts = [];
-
-            if (hours > 0) {
-                parts.push(hours + 'h');
-            }
-
-            if (minutes > 0) {
-                parts.push(minutes + 'm');
-            }
-
-            // Only display seconds if there's no hour or minute component, OR if it's explicitly non-zero
-            if (seconds > 0 || (totalSeconds === 0 && parts.length === 0)) {
-                parts.push(seconds + 's');
-            }
+            if (h > 0) parts.push(h + 'h');
+            if (m > 0) parts.push(m + 'm');
+            if (s > 0 || parts.length === 0) parts.push(s + 's');
 
             return parts.join(' ');
         }
-
-      function updateRequestBadge(count) {
-            const $badge = $('#request-badge');
-            if (count > 0) {
-                $badge.removeClass('hidden');
-                // Optional: You could show the actual count here: $badge.text(count);
-            } else {
-                $badge.addClass('hidden');
-            }
-        }
     </script>
 
-<style>
-     /* Table Header Visibility Fix */
-    .table thead th {
-        color: white !important; 
-    }
+    <style> 
+        .table thead th {
+            color: white !important;
+            vertical-align: middle;
+        }
+         
+        #studentTableBody > tr:not(.assignment-row) > td {
+            color: white !important;
+        }
+         
+        .assignment-row td {
+            background-color: #000;  
+            padding: 10px 20px;
+        }
+         
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: red;
+            border: 1px solid white;
+        }
 
-    /* Red Dot Styling */
-    .notification-badge {
-        position: absolute;
-        top: 0;
-        right: 0;
-        width: 8px; /* Adjusted size */
-        height: 8px; /* Adjusted size */
-        border-radius: 50%;
-        background-color: red;
-        z-index: 10;
-        border: 1px solid white;
-        
-        /* Positioning trick: Shift it relative to its own size to sit exactly on the corner */
-        transform: translate(50%, -50%); 
-    }
-
-    /* Fix to anchor the badge to the icon itself */
-    .top-right-icon button i, .d-flex button i {
-        position: relative; /* Ensure the badge positions correctly */
-        display: inline-block;
-        padding: 0 5px; 
-    }
-
-    .hidden {
-        display: none;
-    }
-</style>
+        .hidden {
+            display: none;
+        }
+    </style>
 }
