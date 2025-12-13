@@ -8,6 +8,120 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/GoldNote.styles.css" asp-append-version="true" />
     <script src="https://kit.fontawesome.com/6bdf13605e.js" crossorigin="anonymous"></script>
+
+    <style>
+        /* --- GLOBAL THEME --- */
+        body {
+            background-color: #000;
+            color: #fff;
+            padding-bottom: 100px; /* IMPORTANT: Makes space for the fixed footer */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar-custom {
+            background-color: #121212;
+            border-bottom: 1px solid #333;
+        }
+
+        .gold-brand {
+            color: #FFD700 !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- USER PROFILE TRIGGER --- */
+        .user-profile-trigger {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 30px;
+            transition: background 0.3s;
+        }
+
+            .user-profile-trigger:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+        .user-text {
+            color: white;
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* --- FOOTER STYLES (The Fix) --- */
+        .footer-custom {
+            background-color: #121212; /* Dark background */
+            border-top: 1px solid #FFD700; /* Gold Top Border */
+            padding: 15px 0;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+        }
+
+        .footer-btn {
+            color: #666; /* Default Grey (Not Blue!) */
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            margin: 0 5px;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+            .footer-btn:hover {
+                color: #fff;
+            }
+
+            /* Active State (Gold) */
+            .footer-btn.active {
+                color: #FFD700;
+            }
+
+                /* A small gold dot under the active link */
+                .footer-btn.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 5px;
+                    height: 5px;
+                    background-color: #FFD700;
+                    border-radius: 50%;
+                }
+
+        /* --- DECORATIVE STAR --- */
+        .footer-deco {
+            position: absolute;
+            top: -12px; /* Pull it up to sit on the border */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #121212; /* Matches footer bg */
+            padding: 0 10px;
+            color: #FFD700;
+        }
+
+        /* --- MODAL STYLES --- */
+        .modal-content {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            color: white;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #333;
+        }
+
+        .text-gold-metallic {
+            background: linear-gradient(to bottom, #d4af37 0%, #ffffaa 50%, #d4af37 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -71,7 +185,8 @@
                 var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
             }
 
-            <div class="d-flex justify-content-center align-items-center">
+
+            <div class="d-flex justify-content-center align-items-center pt-1">
 
                 @* 1. Home Button *@
                 <a class="footer-btn @(currentController == "Home" ? "active" : "inactive")"
@@ -103,14 +218,11 @@
 
             </div>
 
-            <i class="fas fa-star footer-deco"></i>
-
-            <div class="text-center mt-2 small" style="color: #444; font-size: 0.7rem;">
-                &copy; 2025 - GoldNote
+            <div class="text-center mt-2" style="color: #444; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px;">
+                &copy; 2025 GoldNote
             </div>
         </div>
     </footer>
-
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

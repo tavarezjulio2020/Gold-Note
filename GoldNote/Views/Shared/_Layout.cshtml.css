@@ -69,8 +69,7 @@ a.navbar-brand {
    3. button (Generic buttons)
 */
 .btn-gold, 
-.btn-primary,
-button:not(.navbar-toggler):not(.btn-close):not(.nav-btn) {
+.btn-primary{
     /* The Horizontal Metallic Gradient */
     background: linear-gradient(90deg, var(--gold-dark) 0%, var(--gold-primary) 45%, var(--gold-primary) 55%, var(--gold-dark) 100%);
     

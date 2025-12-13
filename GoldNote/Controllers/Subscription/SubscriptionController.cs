@@ -20,36 +20,43 @@ public class SubscriptionController : Controller
         return View();
     }
 
-    // --- UPDATE YOUR POST METHOD SLIGHTLY ---
     [HttpPost]
     [Route("Subscription/BecomeTeacher")]
     public IActionResult BecomeTeacher(SubscriptionModel model)
     {
-        // 1. Check for Model Validation Errors
+        // 1. Check for Validation Errors
         if (!ModelState.IsValid)
         {
-            // IMPORTANT: Since your View is named "Subscription.cshtml" but this action 
-            // is named "BecomeTeacher", you must specify the view name string "Subscription".
-            // Otherwise, it looks for "BecomeTeacher.cshtml" and crashes.
-            return View("Subscription", model);
+            // Extract error messages to send back to the JS alert
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage)
+                .ToList();
+
+            return Json(new { success = false, message = string.Join("\n", errors) });
         }
 
         var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         try
         {
-            string joinCode = _teacherService.CreateClassroom(teacherId, model.ClassroomName);
+            // 2. Create the Classroom
+            string joinCode = _teacherService.CreateClassroom(teacherId, model.ClassroomName, model.SelectedPlan);
 
-            TempData["SuccessMessage"] = $"Welcome! Your classroom '{model.ClassroomName}' was created. Your Class Code is: {joinCode}";
+            // 3. Set the success message for the next page
+            TempData["SuccessMessage"] = $"Welcome! Your classroom '{model.ClassroomName}' was created. Class Code: {joinCode}";
 
-            return RedirectToAction("Teacher_index", "Teacher");
+            // 4. Return JSON success with the destination URL
+            return Json(new
+            {
+                success = true,
+                redirectUrl = Url.Action("Teacher_index", "Teacher")
+            });
         }
         catch (Exception ex)
         {
-            ModelState.AddModelError("", "An error occurred while setting up your classroom. Please try again.");
-
-            // IMPORTANT: Return the specific view name here too
-            return View("Subscription", model);
+            // 5. Return JSON failure
+            return Json(new { success = false, message = "Database error: " + ex.Message });
         }
     }
 }
