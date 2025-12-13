@@ -182,5 +182,22 @@ namespace GoldNote.Controllers.Teachers
                 return BadRequest(new { message = "Delete failed.", error = ex.Message });
             }
         }
+
+        // Add this inside TeacherController.cs
+
+        [HttpDelete]
+        [ValidateAntiForgeryToken]
+        public IActionResult DropStudent(int learnId)
+        {
+            try
+            {
+                _t.DropStudent(learnId);
+                return Ok(new { message = "Student dropped from class." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to drop student.", error = ex.Message });
+            }
+        }
     }
 }

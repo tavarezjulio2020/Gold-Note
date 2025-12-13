@@ -8,101 +8,109 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/GoldNote.styles.css" asp-append-version="true" />
     <script src="https://kit.fontawesome.com/6bdf13605e.js" crossorigin="anonymous"></script>
-
-    @* --- Footer & Nav Styles --- *@
-    <style>
-        /* 1. THE "ACTIVE PAGE" RULE
-                   This forces ANY button (Blue, Cyan, or Gold) to become Solid Gold
-                   when it is the active page. */
-        .btn.active-page {
-            background-color: #FFD700 !important; /* Gold Background */
-            color: black !important; /* Black Text */
-            border-color: #FFD700 !important; /* Gold Border */
-            font-weight: bold;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4); /* Soft Glow */
-        }
-
-        /* 2. Custom Gold Outline (Replacing the Green Practice Button) */
-        .btn-outline-gold {
-            color: #FFD700;
-            border: 1px solid #FFD700;
-            background-color: transparent;
-        }
-
-            .btn-outline-gold:hover {
-                background-color: #FFD700;
-                color: black;
-            }
-
-        /* Optional: Spacing between buttons */
-        footer .btn {
-            margin: 0 5px;
-        }
-    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-secondary-dark mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand gold-brand" asp-area="" asp-controller="Home" asp-action="Index">GoldNote</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+        <nav class="navbar navbar-expand-sm navbar-dark navbar-custom mb-3">
+            <div class="container-fluid d-flex justify-content-between align-items-center">
+                <a class="navbar-brand gold-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-music me-2"></i>GoldNote
+                </a>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <div class="user-profile-trigger d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#userAccountModal">
+                        <span class="user-text d-none d-sm-block">@User.Identity.Name</span>
+                        <i class="fas fa-user-circle fa-2x user-icon" style="color: #FFD700;"></i>
+                    </div>
+                }
             </div>
         </nav>
     </header>
 
-    <div class="container">
-        <main role="main">
+    <div class="container mb-5 pb-5">
+        <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container text-center" style="background-color: black">
+    @* --- USER ACCOUNT MODAL --- *@
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div class="modal fade" id="userAccountModal" tabindex="-1" aria-labelledby="userAccountLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-gold-metallic" id="userAccountLabel">Account Settings</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-user-circle fa-4x text-gold-metallic"></i>
+                        </div>
+                        <h4 class="mb-1 text-white">@User.Identity.Name</h4>
+                        <p class="text-muted small mb-4">
+                            @(User.IsInRole("Teacher") ? "Teacher Account" : "Student Account")
+                        </p>
+                        <hr class="border-secondary mb-4" />
+                        <form method="post" asp-controller="Account" asp-action="Logout">
+                            <button type="submit" class="btn btn-outline-danger w-100 py-2">
+                                <i class="fas fa-sign-out-alt me-2"></i>Log Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
-            @* --- Razor Logic to detect current page --- *@
+    <footer class="footer-custom fixed-bottom">
+        <div class="container position-relative">
+
             @{
                 var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
             }
 
-            <div style="width:100%" class="btn-group mt-2 mb-2" role="group" aria-label="Footer Navigation">
+            <div class="d-flex justify-content-center align-items-center">
 
-                @* 1. Home Button (Blue Outline normally) *@
-                <a class="btn btn-outline-info @(currentController == "Home" ? "active-page" : "")"
+                @* 1. Home Button *@
+                <a class="footer-btn @(currentController == "Home" ? "active" : "inactive")"
                    asp-area="" asp-controller="Home" asp-action="Index">
                     Home
                 </a>
 
-                @* 2. Practice Button (Gold Outline normally - Replaced Green) *@
-                <a class="btn btn-outline-gold @(currentController == "Practice" ? "active-page" : "")"
+                @* 2. Practice Button *@
+                <a class="footer-btn @(currentController == "Practice" ? "active" : "inactive")"
                    asp-area="" asp-controller="Practice" asp-action="Index">
                     Practice
                 </a>
 
-                @* 3. Teacher Button (Cyan/Info Outline normally) *@
+                @* 3. Teacher/Sub Button *@
                 @if (User.IsInRole("Teacher"))
                 {
-                    <a class="btn btn-outline-info @(currentController == "Teacher" ? "active-page" : "")"
+                    <a class="footer-btn @(currentController == "Teacher" ? "active" : "inactive")"
                        asp-area="" asp-controller="Teacher" asp-action="Teacher_index">
                         Teacher
                     </a>
                 }
                 else
                 {
-                    <a class="btn btn-outline-info @(currentController == "Subscription" ? "active-page" : "")"
+                    <a class="footer-btn @(currentController == "Subscription" ? "active" : "inactive")"
                        asp-area="" asp-controller="Subscription" asp-action="Subscription">
                         Teacher
                     </a>
                 }
 
             </div>
-            <div class="small">
+
+            <i class="fas fa-star footer-deco"></i>
+
+            <div class="text-center mt-2 small" style="color: #444; font-size: 0.7rem;">
                 &copy; 2025 - GoldNote
             </div>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

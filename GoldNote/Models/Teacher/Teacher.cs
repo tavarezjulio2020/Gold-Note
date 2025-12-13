@@ -421,5 +421,22 @@ namespace GoldNote.Models.Teacher
             }
             return joinCode;
         }
+
+        // Add this inside the Teacher class
+        public void DropStudent(int learnId)
+        {
+            // detailed logic: This removes the student from the class roster
+            // It does NOT delete their profile or practice history.
+            string sql = @"DELETE FROM studentInClass 
+                   WHERE student_instrument_id = @LearnId";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@LearnId", learnId);
+
+            con.Open();
+            cmd.ExecuteNonQuery();
+        }
     }
 }

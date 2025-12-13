@@ -2,14 +2,15 @@
     ViewData["Title"] = "Practice";
 }
 
-<div class="container mt-4">
+<div class="container mt-4" id="mainContentContainer">
     <div class="row">
 
         <div class="col-lg-7 mb-4">
-
             <div id="startSection" class="card bg-dark border-secondary shadow-lg">
                 <div class="card-body text-center p-5">
-                    <h2 class="text-gold mb-4"><i class="fas fa-music me-2"></i>Start New Practice</h2>
+                    <h2 class="text-gold-metallic mb-4">
+                        <i class="fas fa-music me-2"></i>Start New Practice
+                    </h2>
 
                     <div class="mb-4 d-flex justify-content-center">
                         <select class="form-select form-select-lg bg-black text-white border-secondary w-75 text-center"
@@ -19,64 +20,64 @@
                     </div>
 
                     <button id="startPracticeBtn" class="btn btn-circle btn-gold-glow mx-auto">
-                        <i class="fas fa-play"></i>
+                        <i class="fas fa-play" style="margin-left: 5px;"></i>
                     </button>
                     <p class="text-muted mt-2">Click to Begin</p>
-                </div>
-            </div>
-
-            <div id="inPractice" style="display:none;" class="card bg-dark border-gold shadow-lg">
-                <div class="card-body p-4">
-
-                    <div class="text-center mb-4">
-                        <div id="currentTimePracticed" class="digital-clock-container">
-                            <span id="timerDisplay">00:00</span>
-                        </div>
-                        <small class="text-muted">Session Duration</small>
-                    </div>
-
-                    <div class="d-flex justify-content-center gap-4 mb-4">
-                        <button id="pause" class="btn btn-circle btn-outline-warning">
-                            <i class="fas fa-pause"></i>
-                        </button>
-                        <button id="stop" class="btn btn-circle btn-outline-danger">
-                            <i class="fas fa-stop"></i>
-                        </button>
-                    </div>
-
-                    <hr class="border-secondary" />
-
-                    <h4 class="text-white mb-3">Assignments</h4>
-                    <div id="doAssignment">
-                        <form id="assignmentForm">
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-5">
             <div id="todaysNotes" class="card bg-black border-secondary">
-                <div class="card-header bg-secondary-dark border-bottom border-secondary text-gold">
-                    <h4 class="m-0"><i class="fas fa-chart-bar me-2"></i>Today's Summary</h4>
+                <div class="card-header bg-secondary-dark border-bottom border-secondary">
+                    <h4 class="m-0 text-gold-metallic">
+                        <i class="fas fa-chart-bar me-2"></i>Today's Summary
+                    </h4>
                 </div>
                 <div class="card-body text-white">
-
                     <div class="mb-3">
                         <h6 class="text-muted text-uppercase small">Total Time</h6>
-                        <div id="practicedTime" class="fs-5">0 minutes</div>
+                        <div id="practicedTime" class="fs-5">0 sec</div>
                     </div>
-
                     <hr class="border-secondary" />
-
                     <div class="mb-3">
                         <h6 class="text-muted text-uppercase small">Items Practiced</h6>
                         <div id="itemsPracticed" class="text-white">
                             No practice time recorded today.
                         </div>
                     </div>
-
                 </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="inPractice" style="display:none;" class="full-screen-overlay">
+    <div class="practice-container text-center">
+
+        <h1 class="text-gold-metallic mb-5">Practice Session Active</h1>
+
+        <div class="mb-5">
+            <div id="currentTimePracticed" class="digital-clock-container">
+                <span id="timerDisplay">00:00</span>
+            </div>
+            <p class="text-muted mt-2">Duration</p>
+        </div>
+
+        <div class="d-flex justify-content-center gap-4 mb-5">
+            <button id="pause" class="btn btn-circle btn-outline-warning">
+                <i class="fas fa-pause"></i>
+            </button>
+            <button id="stop" class="btn btn-circle btn-outline-danger">
+                <i class="fas fa-stop"></i>
+            </button>
+        </div>
+
+        <div class="assignment-box mx-auto text-start" style="max-width: 600px;">
+            <h4 class="text-gold mb-3 text-center">Assignments</h4>
+            <div id="doAssignment">
+                <form id="assignmentForm"></form>
             </div>
         </div>
 
@@ -86,13 +87,227 @@
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <style>
-        /* --- GoldNote Theme Styles --- */
+    <script>
+        var timerInterval;
+        var seconds = 0;
+        var isPaused = false;
+        var practiceStartTime;
 
-        .text-gold {
-            color: #FFD700 !important;
+        $(document).ready(function () {
+            getInstruments();
+
+            $('#instrument_selection').change(function () {
+                updatePracticeNotes(true);
+            });
+
+            $('#startPracticeBtn').click(function () {
+                startPractice();
+            });
+
+            $('#pause').click(function () {
+                togglePause();
+            });
+
+            $('#stop').click(function () {
+                stopPractice();
+            });
+
+            $('#assignmentForm').on('click', '.assignment-header', function (event) {
+                if ($(event.target).is('input[type="checkbox"]') || $(event.target).is('label')) {
+                    return;
+                }
+                $(this).find('.arrow').toggleClass('rotated');
+                $(this).next('.assignment-description').slideToggle(200);
+            });
+        });
+
+        function startPractice() {
+            var instId = $('#instrument_selection').val();
+            if (!instId) {
+                alert("Please select an instrument first!");
+                return;
+            }
+
+            // 1. Hide the Main Content and Footer
+            $('#mainContentContainer').fadeOut(200);
+            $('footer').fadeOut(200);
+
+            // 2. Show the Overlay (Using Flex to center)
+            $('#inPractice').fadeIn(200).css('display', 'flex');
+
+            loadAssignments(instId);
+            seconds = 0;
+            isPaused = false;
+            $('#timerDisplay').text("00:00");
+            $('#pause').html('<i class="fas fa-pause"></i>');
+            practiceStartTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
         }
 
+        function stopPractice() {
+            clearInterval(timerInterval);
+            isPaused = true;
+
+            // 1. Hide Overlay
+            $('#inPractice').fadeOut(200);
+
+            // 2. Restore Main Content and Footer
+            $('#mainContentContainer').fadeIn(200);
+            $('footer').fadeIn(200);
+
+            const totalSeconds = seconds;
+            const startTime = practiceStartTime.toISOString();
+            const instrumentId = $('#instrument_selection').val();
+
+            const completedAssignmentIds = [];
+            $('input[name="assignment_complete"]:checked').each(function () {
+                completedAssignmentIds.push($(this).val());
+            });
+
+            const practiceData = {
+                instrumentId: instrumentId,
+                startTime: startTime,
+                durationSeconds: totalSeconds,
+                completedAssignmentIds: completedAssignmentIds
+            };
+
+            $.ajax({
+                url: '/Practice/SavePracticeSession',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(practiceData),
+                success: function (response) {
+                    alert("Practice session saved!");
+                    $('input[name="assignment_complete"]').prop('checked', false);
+                    updatePracticeNotes();
+                },
+                error: function (xhr, status, error) {
+                    console.error("Save failed:", status, error);
+                    alert("Error saving practice session.");
+                }
+            });
+        }
+
+        function loadAssignments(id) {
+            $('#assignmentForm').html('<p class="text-center text-muted mt-3">Loading assignments...</p>');
+            $.ajax({
+                url: '/Practice/GetAssignments',
+                data: { instrumentId: id },
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var html = "";
+                    if (data.length === 0) {
+                        html = '<p class="text-center text-muted mt-3">No assignments found. Just practice freely!</p>';
+                    } else {
+                        for (var i = 0; i < data.length; i++) {
+                            const assignment = data[i];
+                            const assignmentId = assignment.id;
+                            html += '<div style="margin-bottom:10px; border-radius:5px; overflow:hidden;">';
+                            html += '<div class="assignment-header">';
+                            html += '<div class="d-flex align-items-center">';
+                            html += '<input type="checkbox" name="assignment_complete" value="' + assignmentId + '" id="asgn_' + assignmentId + '"> ';
+                            html += '<label for="asgn_' + assignmentId + '" class="mb-0 text-white" style="margin-left:10px; font-weight: bold;">' + assignment.title + '</label>';
+                            html += '</div>';
+                            html += '<span class="arrow"><i class="fas fa-chevron-right"></i></span>';
+                            html += '</div>';
+                            html += '<div class="assignment-description">';
+                            html += assignment.description;
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                    }
+                    $('#assignmentForm').html(html);
+                },
+                error: function () {
+                    $('#assignmentForm').html('<p class="text-danger text-center">Error loading assignments.</p>');
+                }
+            });
+        }
+
+        function togglePause() {
+            if (isPaused) {
+                timerInterval = setInterval(updateTimer, 1000);
+                $('#pause').html('<i class="fas fa-pause"></i>');
+                isPaused = false;
+            } else {
+                clearInterval(timerInterval);
+                $('#pause').html('<i class="fas fa-play"></i>');
+                isPaused = true;
+            }
+        }
+
+        function updateTimer() {
+            seconds++;
+            var m = Math.floor(seconds / 60);
+            var s = seconds % 60;
+            var timeString = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            $('#timerDisplay').text(timeString);
+        }
+
+        function updatePracticeNotes(useSelection = false) {
+            let selectedId = $('#instrument_selection').val();
+            if (!useSelection || !selectedId) { selectedId = 0; }
+
+            $.ajax({
+                url: '/Practice/getTodayPracticeTime',
+                type: 'GET',
+                data: { instrumentId: selectedId },
+                dataType: 'json',
+                success: function (data) {
+                    let htmlList = "";
+                    let totalSecondsAll = 0;
+                    if (!data || data.length === 0) {
+                        $('#practicedTime').text('0 sec');
+                        let msg = selectedId == 0 ? "No practice time recorded today." : "No practice for this instrument.";
+                        $('#itemsPracticed').html(`<p class='text-muted'>${msg}</p>`);
+                        return;
+                    }
+                    data.forEach(item => {
+                        const timeString = formatDuration(item.totalSecondsPracticed);
+                        totalSecondsAll += item.totalSecondsPracticed;
+                        htmlList += `<div style="margin-bottom: 8px; font-size: 1rem; border-left: 2px solid #FFD700; padding-left: 10px;">
+                                                <div class="text-gold">${item.instrumentName}</div>
+                                                <div>${timeString}</div>
+                                             </div>`;
+                    });
+                    $('#practicedTime').text(formatDuration(totalSecondsAll));
+                    $('#itemsPracticed').html(htmlList);
+                },
+                error: function (xhr, status, error) { $('#practicedTime').text('0 sec'); }
+            });
+        }
+
+        function formatDuration(totalSeconds) {
+            if (!totalSeconds || totalSeconds === 0) return '0 sec';
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            let parts = [];
+            if (hours > 0) parts.push(`${hours} hr`);
+            if (minutes > 0) parts.push(`${minutes} min`);
+            if (seconds > 0 || parts.length === 0) parts.push(`${seconds} sec`);
+            return parts.join(' ');
+        }
+
+        function getInstruments() {
+            $.ajax({
+                url: '/Practice/GetMyInstruments',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    var html = "<option value=''>-- Select Instrument --</option>";
+                    for (let i = 0; i < data.length; i++) {
+                        html += "<option value='" + data[i].instrumentId + "'>" + data[i].instrumentName + "</option>"
+                    }
+                    $('#instrument_selection').html(html);
+                    updatePracticeNotes(false);
+                }
+            });
+        }
+    </script>
+
+    <style>
         .bg-secondary-dark {
             background-color: #1a1a1a;
         }
@@ -105,7 +320,46 @@
             border-color: #FFD700 !important;
         }
 
-        /* Circular Play Button with Glow */
+        /* --- VERTICAL GOLD METALLIC TEXT --- */
+        .text-gold-metallic {
+            background: linear-gradient(to bottom, #d4af37 0%, #ffffaa 50%, #d4af37 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent !important;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+            filter: drop-shadow(0px 2px 0px rgba(0,0,0,0.5));
+        }
+
+        /* --- FULL SCREEN OVERLAY --- */
+        .full-screen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000; /* Pure Black Background */
+            z-index: 9999; /* Top level */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .practice-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        /* Play Buttons */
+        .btn-gold-glow {
+            background: linear-gradient(135deg, #4a3700 0%, #FFD700 50%, #4a3700 100%);
+            color: #000;
+            border: 2px solid #4a3700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+        }
+
         .btn-circle {
             width: 80px;
             height: 80px;
@@ -117,45 +371,32 @@
             transition: all 0.3s ease;
         }
 
-        .btn-gold-glow {
-            background-color: #FFD700;
-            color: black;
-            border: none;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-        }
-
-            .btn-gold-glow:hover {
-                transform: scale(1.1);
-                background-color: #ffea70;
-                box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-            }
-
-        /* Smaller circles for pause/stop */
-        #pause, #stop {
-            width: 60px;
-            height: 60px;
-            font-size: 1.5rem;
-        }
-
-        /* Digital Clock Styling */
+        /* Digital Clock */
         .digital-clock-container {
-            background-color: #000;
+            background-color: #111;
             border: 2px solid #333;
-            border-radius: 10px;
-            padding: 10px;
+            border-radius: 15px;
+            padding: 15px 30px;
             display: inline-block;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
         #timerDisplay {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 4rem;
+            font-size: 5rem;
             font-weight: bold;
             color: #FFD700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
         }
 
-        /* Assignment Accordion Styling */
+        /* Assignments */
+        .assignment-box {
+            background-color: #111;
+            border: 1px solid #333;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
         .assignment-header {
             cursor: pointer;
             padding: 15px;
@@ -186,254 +427,18 @@
         .arrow {
             transition: transform 0.3s ease;
             font-size: 0.8em;
-            margin-left: 10px;
             color: #FFD700;
+            margin-left: 10px;
         }
 
             .arrow.rotated {
                 transform: rotate(90deg);
             }
 
-        /* Checkbox styling */
         input[type="checkbox"] {
             accent-color: #FFD700;
             transform: scale(1.3);
             margin-right: 10px;
         }
     </style>
-
-    <script>
-        // Global variables
-        var timerInterval;
-        var seconds = 0;
-        var isPaused = false;
-        var practiceStartTime;
-
-        $(document).ready(function () {
-            getInstruments();
-
-            $('#instrument_selection').change(function () {
-                updatePracticeNotes();
-            });
-
-            $('#startPracticeBtn').click(function () {
-                startPractice();
-            });
-
-            $('#pause').click(function () {
-                togglePause();
-            });
-
-            $('#stop').click(function () {
-                stopPractice();
-            });
-
-            $('#assignmentForm').on('click', '.assignment-header', function (event) {
-                if ($(event.target).is('input[type="checkbox"]') || $(event.target).is('label')) {
-                    return;
-                }
-                $(this).find('.arrow').toggleClass('rotated');
-                $(this).next('.assignment-description').slideToggle(200);
-            });
-        });
-
-        function stopPractice() { 
-            clearInterval(timerInterval);
-            isPaused = true;
-             
-            $('#inPractice').hide(); 
-            $('#startSection').fadeIn();
-
-            // 2. Collect Data
-            const totalSeconds = seconds;
-            const startTime = practiceStartTime.toISOString();
-            const instrumentId = $('#instrument_selection').val();
-
-            // Get all checked assignment IDs
-            const completedAssignmentIds = [];
-            $('input[name="assignment_complete"]:checked').each(function () {
-                completedAssignmentIds.push($(this).val());
-            });
-
-            const practiceData = {
-                instrumentId: instrumentId,
-                startTime: startTime,
-                durationSeconds: totalSeconds,
-                completedAssignmentIds: completedAssignmentIds
-            };
-
-            // 3. AJAX POST Call
-            $.ajax({
-                url: '/Practice/SavePracticeSession',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(practiceData),
-                success: function (response) { 
-                    updatePracticeNotes(); 
-                },
-                error: function (xhr, status, error) {
-                    console.error("Save failed:", status, error);
-                    alert("Error saving practice session.");
-                }
-            });
-        }
-
-        function startPractice() {
-            var instId = $('#instrument_selection').val();
-
-            if (!instId) {
-                alert("Please select an instrument first!");
-                return;
-            }
-
-            // UI Switching
-            $('#startSection').hide();
-            $('#inPractice').css('display', 'block');
-
-            loadAssignments(instId);
-
-            // Timer Setup
-            seconds = 0;
-            isPaused = false;
-            $('#timerDisplay').text("00:00");
-
-            // Reset Pause Button Icon
-            $('#pause').html('<i class="fas fa-pause"></i>');
-
-            practiceStartTime = new Date();
-
-            // Start the clock
-            timerInterval = setInterval(updateTimer, 1000);
-        }
-
-        function loadAssignments(id) {
-            $('#assignmentForm').html('<p class="text-center text-muted mt-3">Loading assignments...</p>');
-
-            $.ajax({
-                url: '/Practice/GetAssignments',
-                data: { instrumentId: id },
-                type: 'GET',
-                dataType: 'json',
-                success: function (data) {
-                    var html = "";
-
-                    if (data.length === 0) {
-                        html = '<p class="text-center text-muted mt-3">No assignments found for this instrument. Just practice freely!</p>';
-                    } else {
-                        for (var i = 0; i < data.length; i++) {
-                            const assignment = data[i];
-                            const assignmentId = assignment.id;
-
-                            html += '<div style="margin-bottom:10px; border-radius:5px; overflow:hidden;">';
-                            html += '<div class="assignment-header">';
-                            html += '<div class="d-flex align-items-center">';
-                            html += '<input type="checkbox" name="assignment_complete" value="' + assignmentId + '" id="asgn_' + assignmentId + '"> ';
-                            html += '<label for="asgn_' + assignmentId + '" class="mb-0 text-white" style="margin-left:10px; font-weight: bold;">' + assignment.title + '</label>';
-                            html += '</div>';
-                            html += '<span class="arrow"><i class="fas fa-chevron-right"></i></span>';
-                            html += '</div>';  
-
-                            html += '<div class="assignment-description">';
-                            html += assignment.description;
-                            html += '</div>';
-                            html += '</div>';
-                        }
-                    }
-                    $('#assignmentForm').html(html);
-                },
-                error: function () {
-                    $('#assignmentForm').html('<p class="text-danger text-center">Error loading assignments.</p>');
-                }
-            });
-        }
-
-        function togglePause() {
-            if (isPaused) {
-                // RESUME
-                timerInterval = setInterval(updateTimer, 1000);
-                $('#pause').html('<i class="fas fa-pause"></i>');  
-                isPaused = false;
-            } else {
-                // PAUSE
-                clearInterval(timerInterval);
-                $('#pause').html('<i class="fas fa-play"></i>');  
-                isPaused = true;
-            }
-        }
-
-        function updateTimer() {
-            seconds++;
-            var m = Math.floor(seconds / 60);
-            var s = seconds % 60;
-            var timeString = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
-            $('#timerDisplay').text(timeString);
-        }
-
-        function updatePracticeNotes() {
-            const selectedInstId = $('#instrument_selection').val();
-
-            $.ajax({
-                url: '/Practice/getTodayPracticeTime',
-                type: 'GET',
-                data: { instrumentId: selectedInstId || 0 },
-                dataType: 'json',
-                success: function (data) {
-                    let htmlList = "";
-                    let totalSecondsAll = 0;
-
-                    if (data.length === 0) {
-                        $('#practicedTime').text('0 minutes');
-                        $('#itemsPracticed').html("<p class='text-muted'>No practice time recorded today.</p>");
-                        return;
-                    }
-                    data.forEach(item => {
-                        const timeString = formatDuration(item.totalSecondsPracticed);
-                        totalSecondsAll += item.totalSecondsPracticed;
-
-                        htmlList += `<div style="margin-bottom: 8px; font-size: 1rem; border-left: 2px solid #FFD700; padding-left: 10px;">
-                                                <div class="text-gold">${item.instrumentName}</div>
-                                                <div>${timeString}</div>
-                                             </div>`;
-                    });
-                     
-                    $('#practicedTime').text(formatDuration(totalSecondsAll));
-
-                    $('#itemsPracticed').html(htmlList);
-                },
-                error: function (xhr, status, error) {
-                    $('#practicedTime').text('Error loading data.');
-                }
-            });
-        }
-
-        function formatDuration(totalSeconds) {
-            if (totalSeconds === 0) return '0 minutes';
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-
-            let parts = [];
-            if (hours > 0) parts.push(`${hours} hr`);
-            if (minutes > 0) parts.push(`${minutes} min`);
-            if (seconds > 0 || parts.length === 0) parts.push(`${seconds} sec`);
-
-            return parts.join(', ');
-        }
-
-        function getInstruments() {
-            $.ajax({
-                url: '/Practice/GetMyInstruments',
-                type: 'GET',
-                dataType: 'json',
-                success: function (data) {
-                    var html = "<option value=''>-- Select Instrument --</option>";
-                    for (let i = 0; i < data.length; i++) {
-                        html += "<option value='" + data[i].instrumentId + "'>" + data[i].instrumentName + "</option>"
-                    }
-                    $('#instrument_selection').html(html);
-                    updatePracticeNotes();
-                }
-            });
-        }
-    </script>
 }
