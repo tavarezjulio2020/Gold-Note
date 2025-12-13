@@ -2,50 +2,189 @@
 
 @{
     ViewData["Title"] = "Create Account";
-    Layout = null;
+    Layout = null; // Standalone page
 }
 
-<link rel="stylesheet" href="~/css/site.css" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Gold Note</title>
 
-<div id="loginForm">
-    <header>
-        <h1>GOLD NOTE</h1>
-        <h2>Create Account</h2>
-    </header>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
-    <form method="post" asp-controller="Account" asp-action="Register">
-        <div asp-validation-summary="ModelOnly" style="color:red; margin-bottom:10px;"></div>
+    <style>
+        body {
+            background-color: #000; /* Deep Black Background */
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-        <label asp-for="Name">Full Name</label>
-        <input asp-for="Name" id="userNameLogin" /> <span asp-validation-for="Name" style="color:gold; font-size:0.8em;"></span>
+        /* --- Main Card --- */
+        #loginForm {
+            background-color: #111; /* Slightly lighter black */
+            border: 1px solid #4a3700; /* Dark Gold Border */
+            border-radius: 10px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px; /* Limits width on desktop */
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); /* Gold Glow */
+        }
 
-        <label asp-for="Username">User Name</label>
-        <input asp-for="Username" id="userNameLogin" />
-        <span asp-validation-for="Username" style="color:gold; font-size:0.8em;"></span>
+        /* --- Typography --- */
+        h1 {
+            color: #FFD700;
+            text-align: center;
+            letter-spacing: 2px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
 
-        <label asp-for="Email">Email Address</label>
-        <input asp-for="Email" type="email" id="userNameLogin" />
-        <span asp-validation-for="Email" style="color:gold; font-size:0.8em;"></span>
+        h2 {
+            color: #aaa;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            font-weight: normal;
+        }
 
-        <label asp-for="PhoneNumber">Phone Number (Optional)</label>
-        <input asp-for="PhoneNumber" type="tel" id="userNameLogin" />
-        <span asp-validation-for="PhoneNumber" style="color:gold; font-size:0.8em;"></span>
+        label {
+            color: #FFD700; /* Gold Labels */
+            margin-top: 15px;
+            font-weight: 500;
+            display: block; /* Ensures labels are on their own line */
+        }
 
-        <label asp-for="Password">Password</label>
-        <input asp-for="Password" type="password" id="userPassLogin" />
-        <span asp-validation-for="Password" style="color:gold; font-size:0.8em;"></span>
+        /* --- Inputs --- */
+        .gold-input {
+            background-color: #222;
+            border: 1px solid #444;
+            color: #fff;
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 5px;
+            transition: all 0.3s ease;
+        }
 
-        <label asp-for="ConfirmPassword">Confirm Password</label>
-        <input asp-for="ConfirmPassword" type="password" id="userPassLogin" />
-        <span asp-validation-for="ConfirmPassword" style="color:gold; font-size:0.8em;"></span>
+            .gold-input:focus {
+                outline: none;
+                border-color: #FFD700;
+                box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+                background-color: #000;
+            }
 
-        <div style="margin-top:20px;">
-            <button id="logInButton" type="submit">Sign Up</button>
+        /* --- Validation Messages --- */
+        .text-warning-custom {
+            color: #ffcc00; /* Brighter gold/yellow for errors so they are readable */
+            font-size: 0.85em;
+            margin-top: 2px;
+            display: block;
+        }
+
+        /* --- Buttons --- */
+        #logInButton {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #000;
+            background: linear-gradient(90deg, #4a3700 0%, #FFD700 45%, #FFD700 55%, #4a3700 100%);
+            border: 1px solid #FFD700;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+
+            #logInButton:hover {
+                transform: scale(1.02);
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            }
+
+        .logGeneralButton {
+            color: #aaa;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: transparent;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+            .logGeneralButton:hover {
+                color: #fff;
+                border-color: #fff;
+                background-color: #222;
+            }
+    </style>
+</head>
+<body>
+
+    <div id="loginForm">
+        <header>
+            <h1>GOLD NOTE</h1>
+            <h2>Create Account</h2>
+        </header>
+
+        <form method="post" asp-controller="Account" asp-action="Register">
+            <div asp-validation-summary="ModelOnly" class="text-danger text-center mb-3"></div>
+
+            <div class="form-group">
+                <label asp-for="Name">Full Name</label>
+                <input asp-for="Name" class="gold-input" placeholder="John Doe" />
+                <span asp-validation-for="Name" class="text-warning-custom"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Username">Username</label>
+                <input asp-for="Username" class="gold-input" placeholder="jdoe123" />
+                <span asp-validation-for="Username" class="text-warning-custom"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Email">Email Address</label>
+                <input asp-for="Email" type="email" class="gold-input" placeholder="john@example.com" />
+                <span asp-validation-for="Email" class="text-warning-custom"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="PhoneNumber">Phone Number <span style="font-size:0.8em; color:#888;">(Optional)</span></label>
+                <input asp-for="PhoneNumber" type="tel" class="gold-input" placeholder="(555) 555-5555" />
+                <span asp-validation-for="PhoneNumber" class="text-warning-custom"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password">Password</label>
+                <input asp-for="Password" type="password" class="gold-input" />
+                <span asp-validation-for="Password" class="text-warning-custom"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ConfirmPassword">Confirm Password</label>
+                <input asp-for="ConfirmPassword" type="password" class="gold-input" />
+                <span asp-validation-for="ConfirmPassword" class="text-warning-custom"></span>
+            </div>
+
+            <div style="margin-top:20px;">
+                <button id="logInButton" type="submit">Sign Up</button>
+            </div>
+        </form>
+
+        <div class="genLogButtons" style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+            <p style="text-align:center; color: #888; font-size: 0.9rem;">Already have an account?</p>
+            <a class="logGeneralButton" asp-controller="Account" asp-action="Login" style="text-decoration:none; display:block; padding:10px;">Back to Login</a>
         </div>
-    </form>
-
-    <div class="genLogButtons">
-        <p style="text-align:center; margin-top:15px;">Already have an account?</p>
-        <a class="logGeneralButton" asp-controller="Account" asp-action="Login" style="text-decoration:none; display:block; padding:10px;">Back to Login</a>
     </div>
-</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@ builder.Services.AddControllersWithViews();
 //builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 builder.Services.AddSingleton<GoldNoteDbContext>();
 builder.Services.AddScoped<StudentModel>(); 
+builder.Services.AddScoped<GoldNote.Models.LeaderBoard.LeaderBoardRepository>();
 builder.Services.AddScoped<GoldNote.Models.Teacher.Teacher>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

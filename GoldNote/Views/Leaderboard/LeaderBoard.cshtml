@@ -1,0 +1,129 @@
+﻿@model List<GoldNote.Models.LeaderBoard.ClassLeaderboardViewModel>
+
+@{
+    ViewData["Title"] = "Class Leaderboard";
+}
+
+<div class="container text-center mb-5">
+    <h1 class="display-4 text-gold-metallic">Weekly Leaderboard</h1>
+    <p class="text-white lead">Rankings for @DateTime.Now.ToString("MMMM dd") - @DateTime.Now.AddDays(6 - (int)DateTime.Now.DayOfWeek).ToString("MMMM dd")</p>
+</div>
+
+@if (Model == null || Model.Count == 0)
+{
+    <div class="text-center text-muted mt-5">
+        <i class="fas fa-users-slash fa-3x mb-3"></i>
+        <h3>You haven't joined any classrooms yet.</h3>
+    </div>
+}
+else
+{
+    <div class="row justify-content-center">
+        @foreach (var classroom in Model)
+        {
+            <div class="col-md-8 mb-5">
+                <div class="card bg-black border-secondary shadow-lg">
+                    <div class="card-header border-secondary" style="background: linear-gradient(90deg, #111, #222);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="text-gold m-0">@classroom.ClassName</h3>
+                            <span class="badge bg-secondary text-white">Code: @classroom.ClassCode</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <table class="table table-dark table-hover mb-0 align-middle">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #4a3700;">
+                                    <th class="text-center text-gold" style="width: 15%;">Rank</th>
+                                    <th class="text-white">Student</th>
+                                    <th class="text-center text-white">Time Practiced</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var entry in classroom.Entries)
+                                {
+                                    // Highlight row if it is the current user
+                                    string rowClass = entry.IsCurrentUser ? "bg-dark-gold" : "";
+                                    string textClass = entry.IsCurrentUser ? "text-gold fw-bold" : "text-white";
+
+                                    <tr class="@rowClass">
+                                        <td class="text-center @textClass" style="font-size: 1.2rem;">
+                                            @if (entry.Rank == 1)
+                                            {
+                                                <span>🏆 1</span>
+                                            }
+                                            else if (entry.Rank == 2)
+                                            {
+                                                <span style="color: silver;">🥈 2</span>
+                                            }
+                                            else if (entry.Rank == 3)
+                                            {
+                                                <span style="color: #cd7f32;">🥉 3</span>
+                                            }
+                                            else
+                                            {
+                                                @entry.Rank
+                                            }
+                                        </td>
+                                        <td class="@textClass">
+                                            @entry.StudentName
+                                            @if (entry.IsCurrentUser)
+                                            {
+                                                <span class="badge bg-gold text-black ms-2" style="font-size: 0.7em;">YOU</span>
+                                            }
+                                        </td>
+                                        <td class="text-center @textClass">
+                                            @TimeDisplay(entry.TotalSeconds)
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@functions {
+    public string TimeDisplay(int totalSeconds)
+    {
+        if (totalSeconds <= 0) return "--";
+        var h = totalSeconds / 3600;
+        var m = (totalSeconds % 3600) / 60;
+
+        // Format: 1h 30m
+        string result = "";
+        if (h > 0) result += $"{h}h ";
+        result += $"{m}m";
+        return result;
+    }
+}
+
+<style>
+    /* Custom Gold Badge */
+    .bg-gold {
+        background-color: #FFD700;
+    }
+
+    /* Highlight Row for Current User */
+    .bg-dark-gold {
+        background-color: #222 !important; /* Slightly lighter than black */
+        border-left: 4px solid #FFD700;
+    }
+
+    /* Metallic Text Header (Reuse from your previous pages) */
+    .text-gold-metallic {
+        background: linear-gradient(90deg, #d4af37 0%, #ffffaa 50%, #d4af37 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        font-weight: bold;
+    }
+
+    .table-dark {
+        --bs-table-bg: #000;
+        --bs-table-striped-bg: #111;
+    }
+</style>

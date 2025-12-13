@@ -199,5 +199,29 @@ namespace GoldNote.Controllers.Teachers
                 return BadRequest(new { message = "Failed to drop student.", error = ex.Message });
             }
         }
+
+        [HttpGet]
+        public IActionResult GetPracticeChartData(DateTime? start, DateTime? end, string studentIds)
+        {
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Default to last 30 days if no date provided
+            DateTime startDate = start ?? DateTime.Now.AddDays(-30);
+            DateTime endDate = end ?? DateTime.Now;
+
+            // Parse student IDs (comma separated string from JS)
+            List<int> selectedIds = new List<int>();
+            if (!string.IsNullOrEmpty(studentIds))
+            {
+                selectedIds = studentIds.Split(',').Select(int.Parse).ToList();
+            }
+
+            var data = _t.GetPracticeTrends(teacherId, startDate, endDate, selectedIds);
+
+            // If filtering by specific students is needed, do it here using Linq 
+            // (requires getting learn_id in the SQL, but for now we return the dataset)
+
+            return Json(new { success = true, data = data });
+        }
     }
 }

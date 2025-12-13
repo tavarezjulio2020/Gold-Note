@@ -36,6 +36,54 @@
     </div>
 </div>
 
+<div class="row mt-5">
+    <div class="col-md-10 offset-md-1">
+        <div class="card bg-black border-secondary">
+            <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #4a3700;">
+                <h4 class="text-gold-metallic m-0">Practice Trends</h4>
+                <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#FilterChartModal">
+                    <i class="fas fa-filter"></i> Filter Graph
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="practiceChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="FilterChartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-black text-white" style="border: 1px solid #4a3700;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-gold">Filter Practice Data</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-gold">Date Range</label>
+                    <div class="input-group">
+                        <input type="date" id="chartStart" class="form-control bg-dark text-white border-secondary">
+                        <span class="input-group-text bg-secondary text-white">to</span>
+                        <input type="date" id="chartEnd" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-gold">Students</label>
+                    <select id="chartStudentSelect" class="form-select bg-dark text-white border-secondary" multiple style="height: 150px;">
+                        </select>
+                    <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-gold" id="applyChartFilter">Apply Filters</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @* --- MODAL FOR CLASSROOM REQUESTS --- *@
 <div class="modal fade" id="RequestModal" tabindex="-1" aria-labelledby="RequestModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -113,21 +161,43 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
+        // --- GLOBAL VARIABLES ---
+        let practiceChart = null;
+
         $(document).ready(function () {
+            // 1. Setup Token
             var token = $('input[name="__RequestVerificationToken"]').val();
             $.ajaxSetup({ headers: { 'RequestVerificationToken': token } });
+
+            // 2. Initial Data Loads
             getStudents();
             checkInitialRequests();
-            $('#RequestModal').on('show.bs.modal', function () { loadRequests(); });
+
+            // 3. Initialize Chart Defaults (Last 30 Days)
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setDate(today.getDate() - 30);
             
-            // ... (Handlers kept same) ...
+            // Set input values
+            $('#chartStart').val(lastMonth.toISOString().split('T')[0]);
+            $('#chartEnd').val(today.toISOString().split('T')[0]);
+
+            // Load Chart & Filter List
+            loadChartData();
+            populateChartFilter();
+
+            // --- EVENT HANDLERS (Existing) ---
+            $('#RequestModal').on('show.bs.modal', function () { loadRequests(); });
             $(document).on('click', '.accept-btn', function () { processRequest($(this).data('request-id'), $(this).data('student-learn-id'), 'Acceptrequest'); });
             $(document).on('click', '.reject-btn', function () { processRequest($(this).data('request-id'), 0, 'Rejectrequest'); });
+
+            // Assignment Modal Handlers
             $(document).on('click', '.edit-assignment-btn', function () {
                 $('#editAssignmentId').val($(this).data('assignment-id'));
                 $('#editTitle').val($(this).data('title'));
@@ -153,9 +223,155 @@
                 var learnId = $(this).data('learn-id');
                 if (confirm('Are you sure you want to remove this student from your class?')) { dropStudent(learnId); }
             });
+
+            // --- CHART HANDLERS (New) ---
+            $('#applyChartFilter').on('click', function() {
+                loadChartData();
+                $('#FilterChartModal').modal('hide');
+            });
         });
 
-        // --- Functions ---
+        // ==========================================
+        //           CHART FUNCTIONS
+        // ==========================================
+
+        function populateChartFilter() {
+            // Re-use your existing API to fill the select box
+            $.get('/Teacher/GetMyStudents', function(data) {
+                let options = '<option value="all" selected>All Students</option>';
+                $.each(data, function(i, s) {
+                    options += `<option value="${s.learnId}">${s.studentName}</option>`;
+                });
+                $('#chartStudentSelect').html(options);
+            });
+        }
+
+        function loadChartData() {
+            const start = $('#chartStart').val();
+            const end = $('#chartEnd').val();
+            let selectedStudents = $('#chartStudentSelect').val();
+
+            // Handle "All" selection logic
+            let studentIds = "";
+            if (selectedStudents && !selectedStudents.includes("all")) {
+                studentIds = selectedStudents.join(',');
+            }
+
+            // Show loading state?
+            // (Optional: You could add a spinner to the chart container here)
+
+            $.ajax({
+                url: '/Teacher/GetPracticeChartData',
+                data: { start: start, end: end, studentIds: studentIds },
+                type: 'GET',
+                success: function(response) {
+                    if(response.success) {
+                        renderChart(response.data);
+                    }
+                },
+                error: function() {
+                    console.error("Failed to load chart data");
+                }
+            });
+        }
+
+        function renderChart(rawData) {
+            const ctx = document.getElementById('practiceChart').getContext('2d');
+
+            // 1. Determine Time Unit based on Date Range
+            const d1 = new Date($('#chartStart').val());
+            const d2 = new Date($('#chartEnd').val());
+            const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+
+            let timeUnit = 'day';
+            if (diffDays > 60) timeUnit = 'week';   // > 2 months show weeks
+            if (diffDays > 180) timeUnit = 'month'; // > 6 months show months
+
+            // 2. Process Data for Chart.js
+            const groupedData = {};
+            
+            // Loop through raw SQL data
+            rawData.forEach(item => {
+                if (!groupedData[item.studentName]) {
+                    groupedData[item.studentName] = [];
+                }
+                
+                // Convert seconds to minutes
+                let minutes = (item.totalSeconds / 60).toFixed(1);
+
+                groupedData[item.studentName].push({
+                    x: item.date, // ISO Date String
+                    y: minutes
+                });
+            });
+
+            // 3. Build Datasets
+            const datasets = Object.keys(groupedData).map((studentName, index) => {
+                // Generate Dynamic Gold Colors
+                // HSL(Hue, Saturation, Lightness) -> Hue 45-55 is Gold/Yellow
+                const hue = 45 + (index * 15) % 20; 
+                const light = 50 + (index * 10) % 40;
+                const color = `hsl(${hue}, 100%, ${light}%)`;
+
+                return {
+                    label: studentName,
+                    data: groupedData[studentName],
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3 // Smooth lines
+                };
+            });
+
+            // 4. Destroy Old Chart
+            if (practiceChart) {
+                practiceChart.destroy();
+            }
+
+            // 5. Create New Chart
+            practiceChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: timeUnit,
+                                tooltipFormat: 'MMM d, yyyy'
+                            },
+                            grid: { color: '#333' },
+                            ticks: { color: '#FFD700' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Minutes Practiced', color: '#FFD700' },
+                            grid: { color: '#333' },
+                            ticks: { color: '#fff' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#fff' } },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0,0,0,0.9)',
+                            titleColor: '#FFD700',
+                            bodyColor: '#fff',
+                            borderColor: '#4a3700',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        //           EXISTING FUNCTIONS
+        // ==========================================
 
         function getStudents() {
             $.ajax({
@@ -165,7 +381,6 @@
                 success: function (data) {
                     var html = "";
                     $.each(data, function (i, student) {
-                        // Main Table: Text White, Square Buttons
                         html += `<tr data-learn-id="${student.learnId}">
                                     <td class="text-center text-white">${student.studentName}</td>
                                     <td class="text-center text-white">${student.instrumentName}</td>
@@ -175,7 +390,6 @@
                                             <button class="btn btn-sm btn-gold toggle-assignments-btn" data-learn-id="${student.learnId}" title="Assignments">
                                                 <i class="fas fa-list"></i> <span class="d-none d-md-inline ms-1">Assignments</span>
                                             </button>
-                                            
                                             <button class="btn btn-sm btn-outline-danger drop-student-btn" data-learn-id="${student.learnId}" title="Drop Student">
                                                 <i class="fas fa-user-minus"></i>
                                             </button>
@@ -193,7 +407,6 @@
                         var $row = $(`.assignment-row-${learnId}`);
                         var $span = $(this).find('span');
                         var $icon = $(this).find('i');
-
                         if ($row.is(':hidden')) {
                             getAssignments(learnId);
                             $span.text('Hide');
@@ -208,7 +421,6 @@
             });
         }
 
-        // ... (Keep getAssignments, etc) ...
         function getAssignments(learnId) {
             var $container = $('#assignments-container-' + learnId);
             $container.html('<div class="text-center text-white"><i class="fas fa-spinner fa-spin"></i> Loading...</div>');
@@ -221,70 +433,56 @@
             });
         }
 
-function renderAssignmentsTable(assignments, learnId) {
-    let html = `
-        <div class="card border-secondary">
-            <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
-                <span class="h5 m-0 position-absolute top-50 start-50 translate-middle text-gold-metallic">Assignments</span>
-                <div class="w-100 d-flex justify-content-end">
-                    <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}"><i class="fas fa-plus"></i> Add New</button>
-                </div>
-            </div>
-            
-            <table class="table table-dark table-hover table-sm mb-0 align-middle">
-                <thead>
-                    <tr style="border-bottom: 2px solid #444; background-color: #000 !important;">
-                        <th class="text-center" style="width: 30%; background-color: #000;">Title</th>
-                        <th class="text-center" style="width: 50%; background-color: #000;">Description</th>
-                        <th class="text-center" style="width: 20%; background-color: #000;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-                
-    if (assignments && assignments.length > 0) {
-        $.each(assignments, function (i, item) {
-            const safeTitle = $('<div>').text(item.title).html();
-            const safeDesc = $('<div>').text(item.description).html();
-            html += `<tr>
-                        <td class="text-white text-center">${safeTitle}</td>
-                        <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
-                        <td class="text-center">
-                            <div class="d-flex justify-content-center gap-2">
-                                <button class="btn btn-sm btn-outline-primary edit-assignment-btn" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-sm btn-outline-danger delete-assignment-btn" data-assignment-id="${item.assignmentId}"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
-        });
-    } else { 
-        html += `<tr><td colspan="3" class="text-center text-muted py-3">No assignments yet.</td></tr>`; 
-    }
-    
-    html += `</tbody></table></div>`;
-    return html;
-}
+        function renderAssignmentsTable(assignments, learnId) {
+            let html = `
+                <div class="card border-secondary">
+                    <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
+                        <span class="h5 m-0 position-absolute top-50 start-50 translate-middle text-gold-metallic">Assignments</span>
+                        <div class="w-100 d-flex justify-content-end">
+                            <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}"><i class="fas fa-plus"></i> Add New</button>
+                        </div>
+                    </div>
+                    <table class="table table-dark table-hover table-sm mb-0 align-middle">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #444; background-color: #000 !important;">
+                                <th class="text-center" style="width: 30%; background-color: #000;">Title</th>
+                                <th class="text-center" style="width: 50%; background-color: #000;">Description</th>
+                                <th class="text-center" style="width: 20%; background-color: #000;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            if (assignments && assignments.length > 0) {
+                $.each(assignments, function (i, item) {
+                    const safeTitle = $('<div>').text(item.title).html();
+                    const safeDesc = $('<div>').text(item.description).html();
+                    html += `<tr>
+                                <td class="text-white text-center">${safeTitle}</td>
+                                <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button class="btn btn-sm btn-outline-primary edit-assignment-btn" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger delete-assignment-btn" data-assignment-id="${item.assignmentId}"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                });
+            } else { html += `<tr><td colspan="3" class="text-center text-muted py-3">No assignments yet.</td></tr>`; }
+            html += `</tbody></table></div>`;
+            return html;
+        }
 
         // --- CRUD Wrappers ---
-        function addAssignment(learnId, title, description)
-        { 
-           $.post('/Teacher/AddAssignment', { learnId, title, description }, 
-           function () {
-              $('#AddAssignmentModal').modal('hide'); getAssignments(learnId); 
-           }).fail(function(xhr) {
-              alert("Error: " + xhr.responseText);
-           }); 
-        }
+        function addAssignment(learnId, title, description) { $.post('/Teacher/AddAssignment', { learnId, title, description }, function () { $('#AddAssignmentModal').modal('hide'); getAssignments(learnId); }).fail(function(xhr) { alert("Error: " + xhr.responseText); }); }
         function editAssignment(id, title, description) { $.ajax({ url: '/Teacher/EditAssignment', type: 'PUT', data: { assignmentId: id, title, description }, success: function () { $('#EditAssignmentModal').modal('hide'); getStudents(); }}); }
         function deleteAssignment(id) { $.ajax({ url: '/Teacher/DeleteAssignment', type: 'DELETE', data: { assignmentId: id }, success: function () { getStudents(); }}); }
         function dropStudent(learnId) { $.ajax({ url: '/Teacher/DropStudent', type: 'DELETE', data: { learnId: learnId }, success: function () { getStudents(); }, error: function(xhr) { alert("Error: " + xhr.responseText); }}); }
-        function checkInitialRequests() { $.get('/Teacher/GetJoinRequest', function (data) { $('#request-badge').toggleClass('hidden', !data || data.length === 0); }); }
         
+        function checkInitialRequests() { $.get('/Teacher/GetJoinRequest', function (data) { $('#request-badge').toggleClass('hidden', !data || data.length === 0); }); }
         function loadRequests() {
             var $container = $('#requestsContainer');
             $container.html('<div class="text-center"><i class="fas fa-spinner fa-spin text-gold"></i> Loading...</div>');
             $.get('/Teacher/GetJoinRequest', function (data) {
                 if (!data || data.length === 0) { $container.html('<p class="text-center text-muted">No pending requests.</p>'); return; }
-                // Modal table headers
                 var html = '<table class="table table-dark table-hover align-middle"><thead><tr><th class="text-center">Student</th><th class="text-center">Instrument</th><th class="text-center">Actions</th></tr></thead><tbody>';
                 $.each(data, function (i, req) { html += `<tr><td>${req.studentName}</td><td>${req.instrumentName}</td><td><button class="btn btn-outline-success btn-sm accept-btn me-2" data-request-id="${req.requestId}" data-student-learn-id="${req.learnId}">Accept</button><button class="btn btn-outline-danger btn-sm reject-btn" data-request-id="${req.requestId}">Reject</button></td></tr>`; });
                 html += '</tbody></table>'; $container.html(html);

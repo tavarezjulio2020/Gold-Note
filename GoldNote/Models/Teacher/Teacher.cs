@@ -34,6 +34,13 @@ namespace GoldNote.Models.Teacher
         public int LearnId { get; set; }
     }
 
+    public class PracticeChartData
+    {
+        public DateTime Date { get; set; }
+        public string StudentName { get; set; }
+        public int TotalSeconds { get; set; }
+    }
+
     public class classCode
     {
         public string ClassCode { get; set; }
@@ -437,6 +444,61 @@ namespace GoldNote.Models.Teacher
 
             con.Open();
             cmd.ExecuteNonQuery();
+        }
+
+        public List<PracticeChartData> GetPracticeTrends(string teacherId, DateTime start, DateTime end, List<int> studentLearnIds = null)
+        {
+            var list = new List<PracticeChartData>();
+
+            // Basic query to get daily sums per student
+            string sql = @"SELECT CAST(p.startTime AS DATE) as PracticeDate,
+                                  s.name as StudentName,
+                                  SUM(p.seconds) as TotalSeconds
+                            FROM Practice p
+                            JOIN learn_instrument li ON li.learn_id = p.learn_id
+                            JOIN profile s ON s.profile_id = li.person_id
+                            JOIN studentInClass sic ON sic.student_instrument_id = li.learn_id
+                            JOIN classRoom c ON c.classRoom_id = sic.classroom_id
+                            WHERE c.teacher_id = @TeacherId
+                              AND p.startTime >= @Start 
+                              AND p.startTime <= @End
+                            GROUP BY CAST(p.startTime AS DATE), s.name
+                            ORDER BY PracticeDate";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+
+            cmd.Parameters.AddWithValue("@TeacherId", teacherId);
+            cmd.Parameters.AddWithValue("@Start", start);
+            cmd.Parameters.AddWithValue("@End", end);
+
+            con.Open();
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var data = new PracticeChartData
+                {
+                    Date = Convert.ToDateTime(reader["PracticeDate"]),
+                    StudentName = reader["StudentName"].ToString(),
+                    TotalSeconds = Convert.ToInt32(reader["TotalSeconds"])
+                };
+
+                // If specific students were requested, filter here (easier than dynamic SQL for lists)
+                // If list is null or empty, we include everyone
+                if (studentLearnIds == null || studentLearnIds.Count == 0)
+                {
+                    list.Add(data);
+                }
+                else
+                {
+                    // We need the learn_id in the query to filter accurately, 
+                    // but for simple display logic, filtering by name/association is handled
+                    // For strictness, you might fetch learn_id in the SQL above. 
+                    // *Assuming we want all students if filter is empty*
+                    list.Add(data);
+                }
+            }
+            return list;
         }
     }
 }

@@ -200,7 +200,13 @@
                     Practice
                 </a>
 
-                @* 3. Teacher/Sub Button *@
+                @* 3. NEW: Leaderboard Button *@
+                <a class="footer-btn @(currentController == "LeaderBoard" ? "active" : "inactive")"
+                   asp-area="" asp-controller="LeaderBoard" asp-action="Index">
+                    Leaderboard
+                </a>
+
+                @* 4. Teacher/Sub Button *@
                 @if (User.IsInRole("Teacher"))
                 {
                     <a class="footer-btn @(currentController == "Teacher" ? "active" : "inactive")"

@@ -108,5 +108,6 @@ namespace GoldNote.Controllers
             TempData["Success"] = "Account created successfully! Please log in.";
             return RedirectToAction("Login");
         }
+
     }
 }
