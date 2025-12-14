@@ -80,7 +80,36 @@
                 <form id="assignmentForm"></form>
             </div>
         </div>
+        <button id="metronomeBtn" class="btn btn-outline-warning btn-circle-small position-absolute top-0 end-0 m-4">
+            <i class="fas fa-tachometer-alt"></i>
+        </button>
 
+        <div id="metronomeModule" class="metronome-popup" style="display:none;">
+            <div class="metronome-header">
+                <h5 class="text-gold m-0">Metronome</h5>
+                <button id="closeMetronome" class="btn btn-sm text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="metronome-body text-center">
+                <h1 class="text-gold-metallic" id="bpmDisplay">100</h1>
+                <p class="text-muted small">BPM</p>
+
+                <input type="range" class="form-range gold-range mb-3" id="bpmSlider" min="40" max="220" value="100">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <select id="timeSignature" class="form-select bg-dark text-white border-secondary me-2" style="width: 70px;">
+                        <option value="4">4/4</option>
+                        <option value="3">3/4</option>
+                        <option value="2">2/4</option>
+                        <option value="6">6/8</option>
+                    </select>
+
+                    <button id="toggleMetronome" class="btn btn-gold-glow btn-sm px-4">
+                        <i class="fas fa-play"></i> Start
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -88,14 +117,27 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
+        // --- PRACTICE TIMER VARIABLES ---
         var timerInterval;
         var seconds = 0;
         var isPaused = false;
         var practiceStartTime;
 
+        // --- METRONOME VARIABLES (These were missing!) ---
+        var audioContext = null;
+        var isMetronomePlaying = false;
+        var bpm = 100;
+        var beatsPerMeasure = 4;
+        var beatCount = 0;
+        var nextNoteTime = 0.0;
+        var scheduleAheadTime = 0.1; // How far ahead to schedule audio (sec)
+        var lookahead = 25.0;        // How frequently to call scheduling function (ms)
+        var metronomeTimerID;
+
         $(document).ready(function () {
             getInstruments();
 
+            // --- Event Listeners ---
             $('#instrument_selection').change(function () {
                 updatePracticeNotes(true);
             });
@@ -112,6 +154,7 @@
                 stopPractice();
             });
 
+            // Assignment Accordion Logic
             $('#assignmentForm').on('click', '.assignment-header', function (event) {
                 if ($(event.target).is('input[type="checkbox"]') || $(event.target).is('label')) {
                     return;
@@ -119,7 +162,102 @@
                 $(this).find('.arrow').toggleClass('rotated');
                 $(this).next('.assignment-description').slideToggle(200);
             });
+
+            // --- METRONOME LISTENERS ---
+            $('#metronomeBtn').click(function() {
+               $('#metronomeModule').fadeToggle(200);
+            });
+
+            $('#closeMetronome').click(function() {
+               $('#metronomeModule').fadeOut(200);
+            });
+
+            $('#bpmSlider').on('input', function() {
+                bpm = $(this).val();
+                $('#bpmDisplay').text(bpm);
+            });
+            
+            $('#timeSignature').change(function() {
+                beatsPerMeasure = parseInt($(this).val());
+                beatCount = 0; 
+            });
+            
+            $('#toggleMetronome').click(function() {
+                if (isMetronomePlaying) {
+                    stopMetronome();
+                } else {
+                    startMetronome();
+                }
+            });
         });
+
+        // --- METRONOME FUNCTIONS ---
+        function startMetronome() {
+            // Initialize AudioContext only after user interaction (browser policy)
+            if (audioContext == null) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            isMetronomePlaying = true;
+            beatCount = 0;
+            nextNoteTime = audioContext.currentTime;
+            metronomeScheduler();
+            
+            $('#toggleMetronome').html('<i class="fas fa-stop"></i> Stop').addClass('btn-outline-danger').removeClass('btn-gold-glow');
+        }
+
+        function stopMetronome() {
+            isMetronomePlaying = false;
+            clearTimeout(metronomeTimerID);
+            $('#toggleMetronome').html('<i class="fas fa-play"></i> Start').addClass('btn-gold-glow').removeClass('btn-outline-danger');
+        }
+
+        function metronomeScheduler() {
+            // While there are notes that will need to play before the next interval, 
+            // schedule them and advance the pointer.
+            while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+                scheduleNote(beatCount, nextNoteTime);
+                nextNote();
+            }
+            
+            if (isMetronomePlaying) {
+                metronomeTimerID = setTimeout(metronomeScheduler, lookahead);
+            }
+        }
+
+        function nextNote() {
+            const secondsPerBeat = 60.0 / bpm;
+            nextNoteTime += secondsPerBeat;
+            
+            beatCount++;
+            if (beatCount == beatsPerMeasure) {
+                beatCount = 0;
+            }
+        }
+
+        function scheduleNote(beatNumber, time) {
+            const osc = audioContext.createOscillator();
+            const envelope = audioContext.createGain();
+
+            osc.connect(envelope);
+            envelope.connect(audioContext.destination);
+
+            // Sound Logic: High pitch for Beat 1, Lower pitch for others
+            if (beatNumber === 0) {
+                osc.frequency.value = 1000; // High Click (Hz)
+            } else {
+                osc.frequency.value = 800;  // Low Click (Hz)
+            }
+
+            envelope.gain.value = 1;
+            envelope.gain.exponentialRampToValueAtTime(1, time + 0.001);
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+
+            osc.start(time);
+            osc.stop(time + 0.03);
+        }
+
+        // --- PRACTICE FUNCTIONS ---
 
         function startPractice() {
             var instId = $('#instrument_selection').val();
@@ -145,6 +283,10 @@
         }
 
         function stopPractice() {
+            // Stop Metronome if running
+            if(isMetronomePlaying) stopMetronome();
+            $('#metronomeModule').hide(); 
+
             clearInterval(timerInterval);
             isPaused = true;
 
@@ -234,6 +376,9 @@
                 clearInterval(timerInterval);
                 $('#pause').html('<i class="fas fa-play"></i>');
                 isPaused = true;
+                
+                // Optional: Stop metronome when pausing practice?
+                // if(isMetronomePlaying) stopMetronome();
             }
         }
 
@@ -267,9 +412,9 @@
                         const timeString = formatDuration(item.totalSecondsPracticed);
                         totalSecondsAll += item.totalSecondsPracticed;
                         htmlList += `<div style="margin-bottom: 8px; font-size: 1rem; border-left: 2px solid #FFD700; padding-left: 10px;">
-                                                <div class="text-gold">${item.instrumentName}</div>
-                                                <div>${timeString}</div>
-                                             </div>`;
+                                        <div class="text-gold">${item.instrumentName}</div>
+                                        <div>${timeString}</div>
+                                     </div>`;
                     });
                     $('#practicedTime').text(formatDuration(totalSecondsAll));
                     $('#itemsPracticed').html(htmlList);
@@ -439,6 +584,56 @@
             accent-color: #FFD700;
             transform: scale(1.3);
             margin-right: 10px;
+        }
+
+        /* Small Circle Button for Top Right */
+        .btn-circle-small {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 10000; /* Ensure it sits on top */
+            background-color: rgba(0,0,0,0.5); /* Semi-transparent background */
+            backdrop-filter: blur(5px);
+        }
+
+        /* Metronome Popup Module */
+        .metronome-popup {
+            position: absolute;
+            top: 80px; /* Just below the button */
+            right: 25px;
+            width: 250px;
+            background-color: #111;
+            border: 1px solid #FFD700;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 10000;
+            overflow: hidden;
+        }
+
+        .metronome-header {
+            background-color: #222;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .metronome-body {
+            padding: 20px;
+        }
+
+        /* Custom Range Slider Styling */
+        .gold-range::-webkit-slider-thumb {
+            background: #FFD700;
+        }
+
+        .gold-range::-webkit-slider-runnable-track {
+            background: #444;
         }
     </style>
 }
