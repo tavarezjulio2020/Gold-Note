@@ -268,24 +268,56 @@
         //            CHART FUNCTIONS
         // ==========================================
 
-        function renderPracticeLineChart(dailyData) {
+function renderPracticeLineChart(dailyData) {
             const ctx = document.getElementById('studentPracticeChart').getContext('2d');
             if (practiceLineChart) practiceLineChart.destroy();
 
-            const chartData = dailyData.map(d => ({ x: d.date, y: d.minutes }));
+            // 1. Map existing server data into a dictionary for quick lookup
+            const practiceMap = {};
+            if (dailyData && dailyData.length > 0) {
+                dailyData.forEach(d => {
+                    // Grab just the YYYY-MM-DD part to ignore time/timezone discrepancies
+                    const dateStr = d.date.split('T')[0];
+                    practiceMap[dateStr] = d.minutes;
+                });
+            }
+
+            // 2. Read the current date range from the inputs on your modal
+            const startDateStr = $('#statsStartDate').val();
+            const endDateStr = $('#statsEndDate').val();
+
+            // 3. Loop from start to end date, filling in missing days with 0
+            // We append 'T00:00:00Z' to force UTC so the browser doesn't accidentally shift dates backwards a day
+            const start = new Date(startDateStr + 'T00:00:00Z');
+            const end = new Date(endDateStr + 'T00:00:00Z');
+            
+            const chartData = [];
+            let current = new Date(start);
+
+            while (current <= end) {
+                const dateStr = current.toISOString().split('T')[0];
+                
+                chartData.push({
+                    x: dateStr,
+                    y: practiceMap[dateStr] || 0 // Use actual minutes, or default to 0 if missing
+                });
+                
+                // Move forward by exactly 1 day
+                current.setUTCDate(current.getUTCDate() + 1);
+            }
 
             practiceLineChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: [{
                         label: 'Minutes Practiced',
-                        data: chartData,
+                        data: chartData, // Use our newly padded array
                         borderColor: '#FFD700',
                         backgroundColor: 'rgba(255, 215, 0, 0.2)',
                         borderWidth: 2,
                         pointRadius: 4,
                         fill: true,
-                        tension: 0.3
+                        tension: 0.3 // You can change this to 0 if you want jagged lines instead of curves
                     }]
                 },
                 options: {

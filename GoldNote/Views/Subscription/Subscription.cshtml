@@ -7,40 +7,24 @@
 <div class="row justify-content-center">
     <div class="col-md-6">
         <h1>@ViewData["Title"]</h1>
-        <p class="lead">Select your plan and create your classroom name to get started.</p>
+        <p class="lead">Create your classroom name to get started for free.</p>
 
         <hr />
 
-        @* FIX 1: Added id="teacherForm" *@
         <form id="teacherForm" asp-action="BecomeTeacher" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-            <h3>1. Select Your Plan</h3>
-            <div class="form-group mb-4">
-                <div class="form-check">
-                    <input type="radio" asp-for="SelectedPlan" value="Promotional" class="form-check-input" id="planPromo" checked />
-                    <label class="form-check-label" for="planPromo">Promotional Free Plan (One-time Offer)</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" asp-for="SelectedPlan" value="Monthly" class="form-check-input" id="planMonthly" />
-                    <label class="form-check-label" for="planMonthly">Monthly Plan $5</label>
-                </div>
-                <div class="form-check">
-                    <input type="radio" asp-for="SelectedPlan" value="Yearly" class="form-check-input" id="planYearly" />
-                    <label class="form-check-label" for="planYearly">Yearly Plan: $30 / year (Save $30)</label>
-                </div>
-                <span asp-validation-for="SelectedPlan" class="text-danger"></span>
-            </div>
+            <input type="hidden" asp-for="SelectedPlan" value="Promotional" />
 
-            <h3>2. Classroom Details</h3>
+            <h3>Classroom Details</h3>
             <div class="form-group mb-4">
-                <label asp-for="ClassroomName"></label>
+                <label asp-for="ClassroomName">Class Room Name</label>
                 <input asp-for="ClassroomName" class="form-control" placeholder="E.g., Mr. Smith's Music Studio" />
                 <span asp-validation-for="ClassroomName" class="text-danger"></span>
             </div>
 
             <div class="form-group">
-                <button type="submit" id="registerAsTeacher" class="btn btn-primary btn-lg">Complete Registration</button>
+                <button type="submit" id="registerAsTeacher" class="btn btn-warning btn-lg text-dark fw-bold">Complete Registration</button>
             </div>
         </form>
     </div>
@@ -54,16 +38,17 @@
         $(document).ready(function () {
             // 1. Setup Token
             var token = $('input[name="__RequestVerificationToken"]').val();
-            $.ajaxSetup({ headers: { 'RequestVerificationToken': token } });
+            if (token) {
+                $.ajaxSetup({ headers: { 'RequestVerificationToken': token } });
+            }
 
             // 2. Handle the Form Submit
             $('#registerAsTeacher').on('click', function (e) {
-                e.preventDefault(); 
+                e.preventDefault();
 
-                // FIX 2: Select by ID
                 var $form = $('#teacherForm');
 
-                // Debugging: Check if form was found (Check your browser console F12)
+                // Debugging: Check if form was found
                 if ($form.length === 0) {
                     console.error("Form not found! Check your HTML ID.");
                     return;
@@ -79,9 +64,9 @@
                 $btn.prop('disabled', true).text('Setting up Classroom...');
 
                 $.ajax({
-                    url: '/Subscription/BecomeTeacher', 
+                    url: '/Subscription/BecomeTeacher',
                     type: 'POST',
-                    data: $form.serialize(),
+                    data: $form.serialize(), // This will automatically include the hidden "Promotional" value
                     success: function (response) {
                         if (response.success) {
                             window.location.href = response.redirectUrl;
@@ -92,7 +77,7 @@
                     },
                     error: function (xhr, status, error) {
                         console.error("AJAX Error:", error);
-                        console.log("Response Text:", xhr.responseText); // This helps debug server crashes
+                        console.log("Response Text:", xhr.responseText);
                         alert("Something went wrong creating the class.");
                         $btn.prop('disabled', false).text('Complete Registration');
                     }

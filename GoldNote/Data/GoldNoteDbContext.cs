@@ -190,7 +190,8 @@ namespace GoldNote.Data
 							JOIN	learn_instrument li
 								  ON	aa.learn_id = li.learn_id
 							WHERE	li.person_id = @person AND
-									li.instrument_id = @inst;
+									li.instrument_id = @inst AND
+                                    aa.activeLearning = 1;
 							";
 
             using var con = new SqlConnection(_connectionString);
@@ -579,21 +580,29 @@ namespace GoldNote.Data
                 // QUERY 2: Assignments Practiced filtered by Date Range
                 // -------------------------------------------------------------
                 string sqlAssign = @"
-                    SELECT a.title, COUNT(pa.ID) as PracticeCount
-                    FROM practiced_assignments pa
-                    JOIN practice p ON pa.practice_id = p.practice_id
-                    JOIN assignment a ON pa.assignment_id = a.assignment_id
-                    WHERE p.learn_id = @learnId
-                      AND CAST(p.startTime AS DATE) >= CAST(@start AS DATE) 
-                      AND CAST(p.startTime AS DATE) <= CAST(@end AS DATE)
-                    GROUP BY a.title;";
+                    SELECT 
+                        a.title, 
+                        (
+                            -- This subquery counts the practices just for this specific assignment, student, and date range
+                            SELECT COUNT(pa.ID) 
+                            FROM practiced_assignments pa
+                            JOIN practice p ON pa.practice_id = p.practice_id
+                            WHERE pa.assignment_id = a.assignment_id
+                              AND p.learn_id = @learnId
+                              AND CAST(p.startTime AS DATE) >= CAST(@start AS DATE) 
+                              AND CAST(p.startTime AS DATE) <= CAST(@end AS DATE)
+                        ) as PracticeCount
+                    FROM assigned_assignments aa
+                    JOIN assignment a ON aa.assignment_id = a.assignment_id
+                    WHERE aa.learn_id = @learnId
+                      AND aa.activeLearning = 1;";
 
                 using (var cmdAssign = new SqlCommand(sqlAssign, con))
                 {
                     cmdAssign.Parameters.AddWithValue("@learnId", learnId);
                     cmdAssign.Parameters.AddWithValue("@start", startDate);
                     cmdAssign.Parameters.AddWithValue("@end", endDate);
-
+                    Console.WriteLine(sqlAssign);
                     using (var reader2 = cmdAssign.ExecuteReader())
                     {
                         while (reader2.Read())

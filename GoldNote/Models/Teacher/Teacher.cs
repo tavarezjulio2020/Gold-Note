@@ -121,7 +121,7 @@ namespace GoldNote.Models.Teacher
                 JOIN assigned_assignments aa ON aa.assignment_id = a.assignment_id
                 JOIN learn_instrument li ON li.learn_id = aa.learn_id
                 WHERE li.learn_id = @LearnId
-                  AND aa.activeLearning = 1 -- <-- THIS IS THE ONLY NEW LINE
+                  AND aa.activeLearning = 1 
                 ORDER BY a.creationDate DESC";
 
             using var con = new SqlConnection(_connectionString);
