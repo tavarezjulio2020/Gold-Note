@@ -223,10 +223,18 @@
                     Log In
                 </button>
 
+                <div class="d-flex justify-content-between mt-3 px-1">
+                    <a asp-controller="Account" asp-action="ForgotUsername" class="link-gold">
+                        Forgot Username?
+                    </a>
+                    <a asp-controller="Account" asp-action="ForgotPassword" class="link-gold">
+                        Forgot Password?
+                    </a>
+                </div>
+
             </form>
 
             <div class="divider"></div>
-
 
             <a asp-controller="Account"
                asp-action="Register"

@@ -101,11 +101,13 @@ namespace GoldNote.Models.Student
         public List<InstrumentItem> getStudentInstruments(string userId)
         {
             List<InstrumentItem> data = new List<InstrumentItem>();
-            string sql = @"SELECT i.inst_name, inst_id, li.learn_id
-                           FROM learn_instrument li
-                           JOIN profile p ON p.profile_id = li.person_id
-                           JOIN instruments i ON i.inst_id = li.instrument_id
-                           WHERE li.person_id = @personID";
+            string sql = @"SELECT i.inst_name, i.inst_id, li.learn_id
+                   FROM learn_instrument li
+                   JOIN profile p 
+                        ON p.profile_id = li.person_id
+                   JOIN instruments i 
+                        ON i.inst_id = li.instrument_id
+                   WHERE li.person_id = @personID AND li.actively_learning = 1";
 
             using (var con = new SqlConnection(_connectionString))
             {
@@ -164,9 +166,6 @@ namespace GoldNote.Models.Student
 
         public async Task UpdateStudentInstruments(string userIdString, List<int> selectedInstrumentIds)
         {
-            string personId = userIdString;
-            string instrumentIdList = selectedInstrumentIds.Any() ? string.Join(", ", selectedInstrumentIds) : "NULL";
-
             using (var con = new SqlConnection(_connectionString))
             {
                 await con.OpenAsync();
@@ -174,38 +173,55 @@ namespace GoldNote.Models.Student
                 {
                     try
                     {
-                        string deleteSql = $@"DELETE FROM learn_instrument 
-                                              WHERE person_id = @personID 
-                                              AND instrument_id NOT IN ({instrumentIdList}) 
-                                              {(selectedInstrumentIds.Any() ? "" : "AND instrument_id IS NOT NULL")};";
+                        // STEP 1: Soft-delete everything. 
+                        // Set actively_learning = 0 for ALL instruments connected to this user.
+                        string resetSql = "UPDATE learn_instrument SET actively_learning = 0 WHERE person_id = @personID";
 
-                        using (var deleteCmd = new SqlCommand(deleteSql, con, transaction))
+                        using (var resetCmd = new SqlCommand(resetSql, con, transaction))
                         {
-                            deleteCmd.Parameters.AddWithValue("@personID", personId);
-                            await deleteCmd.ExecuteNonQueryAsync();
+                            resetCmd.Parameters.AddWithValue("@personID", userIdString);
+                            await resetCmd.ExecuteNonQueryAsync();
                         }
 
-                        string insertSql = @"IF NOT EXISTS (SELECT 1 FROM learn_instrument WHERE person_id = @personID AND instrument_id = @instID)
-                                             BEGIN
-                                                 INSERT INTO learn_instrument (person_id, instrument_id) VALUES (@personID, @instID);
-                                             END";
-
-                        using (var insertCmd = new SqlCommand(insertSql, con, transaction))
+                        // STEP 2: Reactivate existing or Insert new instruments
+                        // Loop through the list of checked boxes from the front end.
+                        if (selectedInstrumentIds != null && selectedInstrumentIds.Any())
                         {
-                            insertCmd.Parameters.AddWithValue("@personID", personId);
-                            var instIdParam = new SqlParameter("@instID", System.Data.SqlDbType.Int);
-                            insertCmd.Parameters.Add(instIdParam);
+                            string upsertSql = @"
+                        IF EXISTS (SELECT 1 FROM learn_instrument WHERE person_id = @personID AND instrument_id = @instID)
+                        BEGIN
+                            -- If the row already exists, just turn it back on
+                            UPDATE learn_instrument SET actively_learning = 1 WHERE person_id = @personID AND instrument_id = @instID
+                        END
+                        ELSE
+                        BEGIN
+                            -- If the row doesn't exist at all, insert it and default it to on
+                            INSERT INTO learn_instrument (person_id, instrument_id, actively_learning) VALUES (@personID, @instID, 1)
+                        END";
 
-                            foreach (int instId in selectedInstrumentIds)
+                            using (var upsertCmd = new SqlCommand(upsertSql, con, transaction))
                             {
-                                instIdParam.Value = instId;
-                                await insertCmd.ExecuteNonQueryAsync();
+                                upsertCmd.Parameters.AddWithValue("@personID", userIdString);
+
+                                // Define the parameter once outside the loop for better performance
+                                var instIdParam = new SqlParameter("@instID", System.Data.SqlDbType.Int);
+                                upsertCmd.Parameters.Add(instIdParam);
+
+                                foreach (int instId in selectedInstrumentIds)
+                                {
+                                    // Update the parameter value and execute for each instrument checked
+                                    instIdParam.Value = instId;
+                                    await upsertCmd.ExecuteNonQueryAsync();
+                                }
                             }
                         }
+
+                        // If everything above succeeds, commit the changes to the database
                         transaction.Commit();
                     }
                     catch
                     {
+                        // If anything fails, roll back so we don't end up with partial updates
                         transaction.Rollback();
                         throw;
                     }
@@ -252,16 +268,16 @@ namespace GoldNote.Models.Student
         {
             List<PracticeSummary> list = new List<PracticeSummary>();
             string sql = @"
-        SELECT 
-            i.inst_name, 
-            SUM(p.seconds) as TotalSeconds
-        FROM practice p
-        JOIN learn_instrument li ON p.learn_id = li.learn_id
-        JOIN instruments i ON li.instrument_id = i.inst_id
-        WHERE li.person_id = @UserId
-        AND CAST(p.startTime AS DATE) = CAST(SYSUTCDATETIME() AS DATE) 
-        AND (i.inst_id = @InstId OR @InstId = 0) 
-        GROUP BY i.inst_name";
+                            SELECT 
+                                i.inst_name, 
+                                SUM(p.seconds) as TotalSeconds
+                            FROM practice p
+                            JOIN learn_instrument li ON p.learn_id = li.learn_id
+                            JOIN instruments i ON li.instrument_id = i.inst_id
+                            WHERE li.person_id = @UserId
+                            AND CAST(p.startTime AS DATE) = CAST(SYSUTCDATETIME() AS DATE) 
+                            AND (i.inst_id = @InstId OR @InstId = 0) 
+                            GROUP BY i.inst_name";
 
             using (var con = new SqlConnection(_connectionString))
             {
@@ -285,6 +301,36 @@ namespace GoldNote.Models.Student
                 }
             }
             return list;
+        }
+
+        public string GetUsernameByEmail(string email)
+        {
+            string username = null;
+
+            // Join the profile and account tables to find the matching username
+            string sql = @"
+                SELECT a.userName 
+                FROM account a
+                JOIN profile p ON a.id = p.account_id
+                WHERE p.email = @Email
+            ";
+
+            using (var con = new SqlConnection(_connectionString))
+            {
+                using (var cmd = new SqlCommand(sql, con))
+                {
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    con.Open();
+
+                    // ExecuteScalar returns the first column of the first row (perfect for a single string)
+                    var result = cmd.ExecuteScalar();
+                    if (result != null && result != DBNull.Value)
+                    {
+                        username = result.ToString();
+                    }
+                }
+            }
+            return username;
         }
     }
 }

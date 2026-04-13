@@ -109,19 +109,20 @@ namespace GoldNote.Models.Teacher
 
             // NOTE: 'desctription' matches your DB column typo
             string sql = @"
-            SELECT 
-                a.assignment_id,
-                a.title,
-                a.desctription, 
-                (SELECT COUNT(*) FROM practiced_assignments pa 
-                 JOIN practice p ON p.practice_id = pa.practice_id
-                 WHERE pa.assignment_id = a.assignment_id 
-                 AND p.startTime > DATEADD(DAY, -7, GETDATE())) as PracticeCount
-            FROM assignment a
-            JOIN assigned_assignments aa ON aa.assignment_id = a.assignment_id
-            JOIN learn_instrument li ON li.learn_id = aa.learn_id
-            WHERE li.learn_id = @LearnId
-            ORDER BY a.creationDate DESC";
+                SELECT 
+                    a.assignment_id,
+                    a.title,
+                    a.desctription, 
+                    (SELECT COUNT(*) FROM practiced_assignments pa 
+                     JOIN practice p ON p.practice_id = pa.practice_id
+                     WHERE pa.assignment_id = a.assignment_id 
+                     AND p.startTime > DATEADD(DAY, -7, GETDATE())) as PracticeCount
+                FROM assignment a
+                JOIN assigned_assignments aa ON aa.assignment_id = a.assignment_id
+                JOIN learn_instrument li ON li.learn_id = aa.learn_id
+                WHERE li.learn_id = @LearnId
+                  AND aa.activeLearning = 1 -- <-- THIS IS THE ONLY NEW LINE
+                ORDER BY a.creationDate DESC";
 
             using var con = new SqlConnection(_connectionString);
             using var cmd = new SqlCommand(sql, con);
@@ -214,15 +215,13 @@ namespace GoldNote.Models.Teacher
 
         public void DeleteAssignment(int assignmentId)
         {
-            // Delete from mapping table first, then main table
-            string sqlDelete = @"
-                DELETE FROM assigned_assignments WHERE assignment_id = @AssignmentId;
-                DELETE FROM assignment WHERE assignment_id = @AssignmentId;";
+            // Flips the switch on the link table instead of deleting the assignment
+            string sql = "UPDATE assigned_assignments SET activeLearning = 0 WHERE assignment_id = @id";
 
             using var con = new SqlConnection(_connectionString);
-            using var cmd = new SqlCommand(sqlDelete, con);
+            using var cmd = new SqlCommand(sql, con);
 
-            cmd.Parameters.AddWithValue("@AssignmentId", assignmentId);
+            cmd.Parameters.AddWithValue("@id", assignmentId);
 
             con.Open();
             cmd.ExecuteNonQuery();

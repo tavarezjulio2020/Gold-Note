@@ -14,7 +14,10 @@ namespace GoldNote.Data
         public int Id { get; set; }
         public string Unique_id { get; set; }
         public string Name { get; set; }
-        public bool IsTeacher { get; set; }  
+        public bool IsTeacher { get; set; }
+
+        public string Email { get; set; }
+        public string Username { get; set; }
     }
 
     public class InstrumentItem 
@@ -61,6 +64,25 @@ namespace GoldNote.Data
     {
         public string TeacherName { get; set; }
         public string InstrumentName { get; set; }
+    }
+
+    public class UserRecoveryModel
+    {
+        public string Name { get; set; }
+        public string Username { get; set; }
+        public string Email { get; set; }
+    }
+
+    public class DailyPracticeStat
+    {
+        public string date { get; set; }
+        public double minutes { get; set; }
+    }
+
+    public class AssignmentPracticeStat
+    {
+        public string title { get; set; }
+        public int count { get; set; }
     }
 
     public class GoldNoteDbContext
@@ -384,7 +406,100 @@ namespace GoldNote.Data
                 return "Database Error: " + ex.Message;
             }
         }
-         
+        // 1. Finds a user by their email address
+        public User GetUserByEmailForRecovery(string email)
+        {
+            User foundUser = null;
+            string sql = @"
+                SELECT p.name, p.email, a.userName
+                FROM profile p
+                JOIN account a ON p.account_id = a.id
+                WHERE p.email = @email";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@email", email);
+
+            con.Open();
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                foundUser = new User
+                {
+                    Name = reader["name"].ToString(),
+                    Email = reader["email"].ToString(),
+                    Username = reader["userName"].ToString()
+                };
+            }
+            return foundUser;
+        }
+
+        // 1.5 Finds a user by their username (For Forgot Password)
+        public User GetUserByUsernameForRecovery(string username)
+        {
+            User foundUser = null;
+            string sql = @"
+                SELECT p.name, p.email, a.userName
+                FROM profile p
+                JOIN account a ON p.account_id = a.id
+                WHERE a.userName = @username";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@username", username);
+
+            con.Open();
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                foundUser = new User
+                {
+                    Name = reader["name"].ToString(),
+                    Email = reader["email"].ToString(),
+                    Username = reader["userName"].ToString()
+                };
+            }
+            return foundUser;
+        }
+
+        // 2. Saves the password reset token to the database
+        public void SavePasswordResetToken(string email, string token, DateTime expiry)
+        {
+            string sql = @"
+        UPDATE account
+        SET reset_token = @token, reset_token_expiry = @expiry
+        WHERE id = (SELECT account_id FROM profile WHERE email = @email)";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@email", email);
+            cmd.Parameters.AddWithValue("@token", token);
+            cmd.Parameters.AddWithValue("@expiry", expiry);
+
+            con.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        // 3. Verifies the token and updates the password
+        public bool ResetPasswordWithToken(string token, string newPassword)
+        {
+            string sql = @"
+        UPDATE account
+        SET passcode = @pass, reset_token = NULL, reset_token_expiry = NULL
+        WHERE reset_token = @token AND reset_token_expiry > @now";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@token", token);
+            cmd.Parameters.AddWithValue("@pass", newPassword);
+            cmd.Parameters.AddWithValue("@now", DateTime.Now);
+
+            con.Open();
+            int rowsAffected = cmd.ExecuteNonQuery();
+
+            // Returns true if the password was successfully updated
+            return rowsAffected > 0;
+        }
         public List<UserInstrumentDTO> GetInstrumentsByUserId(int userId)
         {
             // This query assumes a table 'user_instrument' links the profile/account to the 'instrument' table
@@ -418,6 +533,82 @@ namespace GoldNote.Data
             // ...
             // Placeholder return:
             return new List<UserTeacherDTO>();
+        }
+
+        public object GetStudentStatsData(int learnId, DateTime startDate, DateTime endDate)
+        {
+            var dailyData = new List<DailyPracticeStat>();
+            var assignmentData = new List<AssignmentPracticeStat>();
+
+            using (var con = new SqlConnection(_connectionString))
+            {
+                con.Open();
+
+                // -------------------------------------------------------------
+                // QUERY 1: Daily Practice Minutes filtered by Date Range
+                // -------------------------------------------------------------
+                string sqlDaily = @"
+                    SELECT CAST(startTime AS DATE) AS PracticeDate, SUM(seconds) AS TotalSeconds
+                    FROM practice
+                    WHERE learn_id = @learnId
+                      AND CAST(startTime AS DATE) >= CAST(@start AS DATE) 
+                      AND CAST(startTime AS DATE) <= CAST(@end AS DATE)
+                    GROUP BY CAST(startTime AS DATE)
+                    ORDER BY PracticeDate;";
+
+                using (var cmdDaily = new SqlCommand(sqlDaily, con))
+                {
+                    cmdDaily.Parameters.AddWithValue("@learnId", learnId);
+                    cmdDaily.Parameters.AddWithValue("@start", startDate);
+                    cmdDaily.Parameters.AddWithValue("@end", endDate);
+
+                    using (var reader = cmdDaily.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            dailyData.Add(new DailyPracticeStat
+                            {
+                                date = Convert.ToDateTime(reader["PracticeDate"]).ToString("yyyy-MM-dd"),
+                                minutes = Math.Round(Convert.ToDouble(reader["TotalSeconds"]) / 60.0, 1)
+                            });
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // QUERY 2: Assignments Practiced filtered by Date Range
+                // -------------------------------------------------------------
+                string sqlAssign = @"
+                    SELECT a.title, COUNT(pa.ID) as PracticeCount
+                    FROM practiced_assignments pa
+                    JOIN practice p ON pa.practice_id = p.practice_id
+                    JOIN assignment a ON pa.assignment_id = a.assignment_id
+                    WHERE p.learn_id = @learnId
+                      AND CAST(p.startTime AS DATE) >= CAST(@start AS DATE) 
+                      AND CAST(p.startTime AS DATE) <= CAST(@end AS DATE)
+                    GROUP BY a.title;";
+
+                using (var cmdAssign = new SqlCommand(sqlAssign, con))
+                {
+                    cmdAssign.Parameters.AddWithValue("@learnId", learnId);
+                    cmdAssign.Parameters.AddWithValue("@start", startDate);
+                    cmdAssign.Parameters.AddWithValue("@end", endDate);
+
+                    using (var reader2 = cmdAssign.ExecuteReader())
+                    {
+                        while (reader2.Read())
+                        {
+                            assignmentData.Add(new AssignmentPracticeStat
+                            {
+                                title = reader2["title"].ToString(),
+                                count = Convert.ToInt32(reader2["PracticeCount"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return new { success = true, dailyData = dailyData, assignmentData = assignmentData };
         }
     }
 

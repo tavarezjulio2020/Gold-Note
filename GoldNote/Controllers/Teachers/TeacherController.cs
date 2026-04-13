@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GoldNote.Models.Teacher;
+using GoldNote.Data;
 
 namespace GoldNote.Controllers.Teachers
 {
@@ -11,11 +12,13 @@ namespace GoldNote.Controllers.Teachers
     public class TeacherController : Controller
     {
         private readonly Teacher _t;
+        private readonly GoldNoteDbContext _db;
 
         // Constructor for dependency injection
-        public TeacherController(Teacher t)
+        public TeacherController(Teacher t, GoldNoteDbContext db)
         {
             _t = t;
+            _db = db;
         }
 
         [HttpGet]
@@ -217,11 +220,27 @@ namespace GoldNote.Controllers.Teachers
             }
 
             var data = _t.GetPracticeTrends(teacherId, startDate, endDate, selectedIds);
-
-            // If filtering by specific students is needed, do it here using Linq 
-            // (requires getting learn_id in the SQL, but for now we return the dataset)
-
+             
             return Json(new { success = true, data = data });
+        }
+
+        [HttpGet]
+        public IActionResult GetStudentStats(int learnId, DateTime? start, DateTime? end)
+        {
+            try
+            {
+                // If no dates are provided, default to the last 7 days
+                DateTime startDate = start ?? DateTime.Now.AddDays(-7);
+                DateTime endDate = end ?? DateTime.Now;
+
+                // Pass the dates down to the database query
+                var stats = _db.GetStudentStatsData(learnId, startDate, endDate);
+                return Json(stats);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

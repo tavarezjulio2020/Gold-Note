@@ -24,7 +24,7 @@
                     <tr>
                         <th>Student</th>
                         <th>Instrument</th>
-                        <th>Practice (Total)</th>
+                        <th>Weekly Practice</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -36,48 +36,48 @@
     </div>
 </div>
 
-<div class="row mt-5">
-    <div class="col-md-10 offset-md-1">
-        <div class="card bg-black border-secondary">
-            <div class="card-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #4a3700;">
-                <h4 class="text-gold-metallic m-0">Practice Trends</h4>
-                <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#FilterChartModal">
-                    <i class="fas fa-filter"></i> Filter Graph
-                </button>
-            </div>
-            <div class="card-body">
-                <canvas id="practiceChart" style="max-height: 400px;"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="FilterChartModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content bg-black text-white" style="border: 1px solid #4a3700;">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title text-gold">Filter Practice Data</h5>
+@* --- MODAL FOR STUDENT STATS --- *@
+<div class="modal fade" id="StudentStatsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-black border-secondary">
+            <div class="modal-header" style="border-bottom: 1px solid #4a3700;">
+                <h5 class="modal-title text-gold-metallic" id="StudentStatsModalLabel">Student Stats</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label text-gold">Date Range</label>
-                    <div class="input-group">
-                        <input type="date" id="chartStart" class="form-control bg-dark text-white border-secondary">
-                        <span class="input-group-text bg-secondary text-white">to</span>
-                        <input type="date" id="chartEnd" class="form-control bg-dark text-white border-secondary">
+
+                <div class="row mb-4 bg-dark p-3 rounded border border-secondary mx-1">
+                    <div class="col-md-5">
+                        <label class="text-gold small fw-bold text-uppercase mb-1">Start Date</label>
+                        <input type="date" id="statsStartDate" class="form-control bg-black text-white border-secondary">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="text-gold small fw-bold text-uppercase mb-1">End Date</label>
+                        <input type="date" id="statsEndDate" class="form-control bg-black text-white border-secondary">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end mt-3 mt-md-0">
+                        <button class="btn btn-gold w-100" id="applyStatsFilterBtn">Apply</button>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-gold">Students</label>
-                    <select id="chartStudentSelect" class="form-select bg-dark text-white border-secondary" multiple style="height: 150px;">
-                        </select>
-                    <small class="text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple.</small>
+
+                <div class="mb-4">
+                    <h6 class="text-white mb-3"><i class="fas fa-chart-line text-gold me-2"></i>Daily Practice</h6>
+                    <div style="height: 250px; width: 100%;">
+                        <canvas id="studentPracticeChart"></canvas>
+                    </div>
+                </div>
+
+                <hr class="border-secondary my-4" style="opacity: 0.3;">
+
+                <div>
+                    <h6 class="text-white mb-3"><i class="fas fa-tasks text-gold me-2"></i>Assignments Practiced</h6>
+                    <div style="height: 250px; width: 100%;">
+                        <canvas id="studentAssignmentChart"></canvas>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-gold" id="applyChartFilter">Apply Filters</button>
             </div>
         </div>
     </div>
@@ -168,7 +168,8 @@
 
     <script>
         // --- GLOBAL VARIABLES ---
-        let practiceChart = null;
+        let practiceLineChart = null;
+        let assignmentBarChart = null;
 
         $(document).ready(function () {
             // 1. Setup Token
@@ -179,23 +180,32 @@
             getStudents();
             checkInitialRequests();
 
-            // 3. Initialize Chart Defaults (Last 30 Days)
-            const today = new Date();
-            const lastMonth = new Date();
-            lastMonth.setDate(today.getDate() - 30);
-            
-            // Set input values
-            $('#chartStart').val(lastMonth.toISOString().split('T')[0]);
-            $('#chartEnd').val(today.toISOString().split('T')[0]);
-
-            // Load Chart & Filter List
-            loadChartData();
-            populateChartFilter();
-
-            // --- EVENT HANDLERS (Existing) ---
+            // --- EVENT HANDLERS ---
             $('#RequestModal').on('show.bs.modal', function () { loadRequests(); });
             $(document).on('click', '.accept-btn', function () { processRequest($(this).data('request-id'), $(this).data('student-learn-id'), 'Acceptrequest'); });
             $(document).on('click', '.reject-btn', function () { processRequest($(this).data('request-id'), 0, 'Rejectrequest'); });
+
+            $(document).on('click', '.student-stats-link', function (e) {
+                e.preventDefault();
+                const learnId = $(this).data('learn-id');
+                const studentName = $(this).data('name');
+
+                $('#StudentStatsModalLabel').text(`${studentName}'s Practice Stats`);
+                
+                // Set default dates (Last 7 days to Today)
+                const today = new Date();
+                const lastWeek = new Date();
+                lastWeek.setDate(today.getDate() - 7);
+                
+                $('#statsStartDate').val(lastWeek.toISOString().split('T')[0]);
+                $('#statsEndDate').val(today.toISOString().split('T')[0]);
+
+                // Store the learnId on the Apply button so it knows who to fetch data for
+                $('#applyStatsFilterBtn').data('learn-id', learnId);
+
+                $('#StudentStatsModal').modal('show');
+                loadStudentStats(learnId);
+            });
 
             // Assignment Modal Handlers
             $(document).on('click', '.edit-assignment-btn', function () {
@@ -224,147 +234,114 @@
                 if (confirm('Are you sure you want to remove this student from your class?')) { dropStudent(learnId); }
             });
 
-            // --- CHART HANDLERS (New) ---
-            $('#applyChartFilter').on('click', function() {
-                loadChartData();
-                $('#FilterChartModal').modal('hide');
+             // Apply Filter Button Click Handler
+            $('#applyStatsFilterBtn').on('click', function() {
+                const learnId = $(this).data('learn-id');
+                loadStudentStats(learnId);
             });
         });
 
-        // ==========================================
-        //           CHART FUNCTIONS
-        // ==========================================
 
-        function populateChartFilter() {
-            // Re-use your existing API to fill the select box
-            $.get('/Teacher/GetMyStudents', function(data) {
-                let options = '<option value="all" selected>All Students</option>';
-                $.each(data, function(i, s) {
-                    options += `<option value="${s.learnId}">${s.studentName}</option>`;
-                });
-                $('#chartStudentSelect').html(options);
-            });
-        }
+            // UPDATED: Fetches data using the dates in the input fields
+            function loadStudentStats(learnId) {
+                const startDate = $('#statsStartDate').val();
+                const endDate = $('#statsEndDate').val();
 
-        function loadChartData() {
-            const start = $('#chartStart').val();
-            const end = $('#chartEnd').val();
-            let selectedStudents = $('#chartStudentSelect').val();
-
-            // Handle "All" selection logic
-            let studentIds = "";
-            if (selectedStudents && !selectedStudents.includes("all")) {
-                studentIds = selectedStudents.join(',');
-            }
-
-            // Show loading state?
-            // (Optional: You could add a spinner to the chart container here)
-
-            $.ajax({
-                url: '/Teacher/GetPracticeChartData',
-                data: { start: start, end: end, studentIds: studentIds },
-                type: 'GET',
-                success: function(response) {
-                    if(response.success) {
-                        renderChart(response.data);
+                $.ajax({
+                    // Changed endpoint name to be more accurate
+                    url: '/Teacher/GetStudentStats', 
+                    data: { learnId: learnId, start: startDate, end: endDate },
+                    type: 'GET',
+                    success: function(response) {
+                        if(response.success) {
+                            renderPracticeLineChart(response.dailyData);
+                            renderAssignmentBarChart(response.assignmentData);
+                        }
+                    },
+                    error: function() {
+                        console.error("Failed to load student stats");
                     }
-                },
-                error: function() {
-                    console.error("Failed to load chart data");
-                }
-            });
-        }
-
-        function renderChart(rawData) {
-            const ctx = document.getElementById('practiceChart').getContext('2d');
-
-            // 1. Determine Time Unit based on Date Range
-            const d1 = new Date($('#chartStart').val());
-            const d2 = new Date($('#chartEnd').val());
-            const diffDays = Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
-
-            let timeUnit = 'day';
-            if (diffDays > 60) timeUnit = 'week';   // > 2 months show weeks
-            if (diffDays > 180) timeUnit = 'month'; // > 6 months show months
-
-            // 2. Process Data for Chart.js
-            const groupedData = {};
-            
-            // Loop through raw SQL data
-            rawData.forEach(item => {
-                if (!groupedData[item.studentName]) {
-                    groupedData[item.studentName] = [];
-                }
-                
-                // Convert seconds to minutes
-                let minutes = (item.totalSeconds / 60).toFixed(1);
-
-                groupedData[item.studentName].push({
-                    x: item.date, // ISO Date String
-                    y: minutes
                 });
-            });
-
-            // 3. Build Datasets
-            const datasets = Object.keys(groupedData).map((studentName, index) => {
-                // Generate Dynamic Gold Colors
-                // HSL(Hue, Saturation, Lightness) -> Hue 45-55 is Gold/Yellow
-                const hue = 45 + (index * 15) % 20; 
-                const light = 50 + (index * 10) % 40;
-                const color = `hsl(${hue}, 100%, ${light}%)`;
-
-                return {
-                    label: studentName,
-                    data: groupedData[studentName],
-                    borderColor: color,
-                    backgroundColor: color,
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    tension: 0.3 // Smooth lines
-                };
-            });
-
-            // 4. Destroy Old Chart
-            if (practiceChart) {
-                practiceChart.destroy();
             }
 
-            // 5. Create New Chart
-            practiceChart = new Chart(ctx, {
+        // ==========================================
+        //            CHART FUNCTIONS
+        // ==========================================
+
+        function renderPracticeLineChart(dailyData) {
+            const ctx = document.getElementById('studentPracticeChart').getContext('2d');
+            if (practiceLineChart) practiceLineChart.destroy();
+
+            const chartData = dailyData.map(d => ({ x: d.date, y: d.minutes }));
+
+            practiceLineChart = new Chart(ctx, {
                 type: 'line',
-                data: { datasets: datasets },
+                data: {
+                    datasets: [{
+                        label: 'Minutes Practiced',
+                        data: chartData,
+                        borderColor: '#FFD700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
                         x: {
                             type: 'time',
-                            time: {
-                                unit: timeUnit,
-                                tooltipFormat: 'MMM d, yyyy'
-                            },
+                            time: { unit: 'day', tooltipFormat: 'MMM d, yyyy' },
                             grid: { color: '#333' },
-                            ticks: { color: '#FFD700' }
+                            ticks: { color: '#ccc' }
                         },
                         y: {
-                            title: { display: true, text: 'Minutes Practiced', color: '#FFD700' },
+                            beginAtZero: true,
                             grid: { color: '#333' },
-                            ticks: { color: '#fff' },
-                            beginAtZero: true
+                            ticks: { color: '#ccc' }
                         }
                     },
-                    plugins: {
-                        legend: { labels: { color: '#fff' } },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0,0,0,0.9)',
-                            titleColor: '#FFD700',
-                            bodyColor: '#fff',
-                            borderColor: '#4a3700',
-                            borderWidth: 1
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderAssignmentBarChart(assignmentData) {
+            const ctx = document.getElementById('studentAssignmentChart').getContext('2d');
+            if (assignmentBarChart) assignmentBarChart.destroy();
+
+            const labels = assignmentData.map(d => d.title);
+            const dataPoints = assignmentData.map(d => d.count);
+
+            assignmentBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Times Practiced',
+                        data: dataPoints,
+                        backgroundColor: '#d4af37',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#ccc' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#333' },
+                            ticks: { color: '#ccc', stepSize: 1 }
                         }
-                    }
+                    },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
@@ -382,26 +359,30 @@
                     var html = "";
                     $.each(data, function (i, student) {
                         html += `<tr data-learn-id="${student.learnId}">
-                                    <td class="text-center text-white">${student.studentName}</td>
-                                    <td class="text-center text-white">${student.instrumentName}</td>
-                                    <td class="text-center text-white">${timeDisplay(student.secondsPracticed)}</td>
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-2">
-                                            <button class="btn btn-sm btn-gold toggle-assignments-btn" data-learn-id="${student.learnId}" title="Assignments">
-                                                <i class="fas fa-list"></i> <span class="d-none d-md-inline ms-1">Assignments</span>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger drop-student-btn" data-learn-id="${student.learnId}" title="Drop Student">
-                                                <i class="fas fa-user-minus"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                 </tr>
-                                 <tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">
-                                    <td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>
-                                 </tr>`;
+                                            <td class="text-center">
+                                                <a href="#" class="student-stats-link text-gold" style="text-decoration: none; font-weight: bold; border-bottom: 1px dashed #FFD700;" data-learn-id="${student.learnId}" data-name="${student.studentName}">
+                                                    ${student.studentName}
+                                                </a>
+                                            </td>
+                                            <td class="text-center text-white">${student.instrumentName}</td>
+                                            <td class="text-center text-white">${timeDisplay(student.secondsPracticed)}</td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center gap-2">
+                                                    <button class="btn btn-sm btn-gold toggle-assignments-btn" data-learn-id="${student.learnId}" title="Assignments">
+                                                        <i class="fas fa-list"></i> <span class="d-none d-md-inline ms-1">Assignments</span>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger drop-student-btn" data-learn-id="${student.learnId}" title="Drop Student">
+                                                        <i class="fas fa-user-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                         </tr>
+                                         <tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">
+                                            <td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>
+                                         </tr>`;
                     });
                     $('#studentTableBody').html(html);
-                    
+
                     $('.toggle-assignments-btn').on('click', function () {
                         var learnId = $(this).data('learn-id');
                         var $row = $(`.assignment-row-${learnId}`);
@@ -435,48 +416,47 @@
 
         function renderAssignmentsTable(assignments, learnId) {
             let html = `
-                <div class="card border-secondary">
-                    <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
-                        <span class="h5 m-0 position-absolute top-50 start-50 translate-middle text-gold-metallic">Assignments</span>
-                        <div class="w-100 d-flex justify-content-end">
-                            <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}"><i class="fas fa-plus"></i> Add New</button>
-                        </div>
-                    </div>
-                    <table class="table table-dark table-hover table-sm mb-0 align-middle">
-                        <thead>
-                            <tr style="border-bottom: 2px solid #444; background-color: #000 !important;">
-                                <th class="text-center" style="width: 30%; background-color: #000;">Title</th>
-                                <th class="text-center" style="width: 50%; background-color: #000;">Description</th>
-                                <th class="text-center" style="width: 20%; background-color: #000;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
+                        <div class="card border-secondary">
+                            <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
+                                <span class="h5 m-0 position-absolute top-50 start-50 translate-middle text-gold-metallic">Assignments</span>
+                                <div class="w-100 d-flex justify-content-end">
+                                    <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}"><i class="fas fa-plus"></i> Add New</button>
+                                </div>
+                            </div>
+                            <table class="table table-dark table-hover table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #444; background-color: #000 !important;">
+                                        <th class="text-center" style="width: 30%; background-color: #000;">Title</th>
+                                        <th class="text-center" style="width: 50%; background-color: #000;">Description</th>
+                                        <th class="text-center" style="width: 20%; background-color: #000;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
             if (assignments && assignments.length > 0) {
                 $.each(assignments, function (i, item) {
                     const safeTitle = $('<div>').text(item.title).html();
                     const safeDesc = $('<div>').text(item.description).html();
                     html += `<tr>
-                                <td class="text-white text-center">${safeTitle}</td>
-                                <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center gap-2">
-                                        <button class="btn btn-sm btn-outline-primary edit-assignment-btn" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}"><i class="fas fa-edit"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger delete-assignment-btn" data-assignment-id="${item.assignmentId}"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>`;
+                                        <td class="text-white text-center">${safeTitle}</td>
+                                        <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                <button class="btn btn-sm btn-outline-primary edit-assignment-btn" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}"><i class="fas fa-edit"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger delete-assignment-btn" data-assignment-id="${item.assignmentId}"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>`;
                 });
             } else { html += `<tr><td colspan="3" class="text-center text-muted py-3">No assignments yet.</td></tr>`; }
             html += `</tbody></table></div>`;
             return html;
         }
 
-        // --- CRUD Wrappers ---
-        function addAssignment(learnId, title, description) { $.post('/Teacher/AddAssignment', { learnId, title, description }, function () { $('#AddAssignmentModal').modal('hide'); getAssignments(learnId); }).fail(function(xhr) { alert("Error: " + xhr.responseText); }); }
-        function editAssignment(id, title, description) { $.ajax({ url: '/Teacher/EditAssignment', type: 'PUT', data: { assignmentId: id, title, description }, success: function () { $('#EditAssignmentModal').modal('hide'); getStudents(); }}); }
-        function deleteAssignment(id) { $.ajax({ url: '/Teacher/DeleteAssignment', type: 'DELETE', data: { assignmentId: id }, success: function () { getStudents(); }}); }
-        function dropStudent(learnId) { $.ajax({ url: '/Teacher/DropStudent', type: 'DELETE', data: { learnId: learnId }, success: function () { getStudents(); }, error: function(xhr) { alert("Error: " + xhr.responseText); }}); }
-        
+        function addAssignment(learnId, title, description) { $.post('/Teacher/AddAssignment', { learnId, title, description }, function () { $('#AddAssignmentModal').modal('hide'); getAssignments(learnId); }).fail(function (xhr) { alert("Error: " + xhr.responseText); }); }
+        function editAssignment(id, title, description) { $.ajax({ url: '/Teacher/EditAssignment', type: 'PUT', data: { assignmentId: id, title, description }, success: function () { $('#EditAssignmentModal').modal('hide'); getStudents(); } }); }
+        function deleteAssignment(id) { $.ajax({ url: '/Teacher/DeleteAssignment', type: 'DELETE', data: { assignmentId: id }, success: function () { getStudents(); } }); }
+        function dropStudent(learnId) { $.ajax({ url: '/Teacher/DropStudent', type: 'DELETE', data: { learnId: learnId }, success: function () { getStudents(); }, error: function (xhr) { alert("Error: " + xhr.responseText); } }); }
+
         function checkInitialRequests() { $.get('/Teacher/GetJoinRequest', function (data) { $('#request-badge').toggleClass('hidden', !data || data.length === 0); }); }
         function loadRequests() {
             var $container = $('#requestsContainer');
@@ -493,9 +473,21 @@
     </script>
 
     <style>
-        .table thead th { vertical-align: middle; }
-        #studentTableBody > tr:not(.assignment-row) > td { color: white !important; }
-        .assignment-row td { background-color: #000; padding: 10px 20px; }
-        .hidden { display: none; }
+        .table thead th {
+            vertical-align: middle;
+        }
+
+        #studentTableBody > tr:not(.assignment-row) > td {
+            color: white !important;
+        }
+
+        .assignment-row td {
+            background-color: #000;
+            padding: 10px 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 }
