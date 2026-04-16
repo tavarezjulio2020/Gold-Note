@@ -1,17 +1,23 @@
 ﻿<div class="text-center">
     <h1 class="display-4 text-gold-metallic">@ViewBag.Username</h1>
 
-    <div class="d-flex justify-content-center align-items-center mb-4">
-        <h2 class="m-0 me-3 text-white">Class Code: <span class="text-gold">@ViewBag.ClassCode.ClassCode</span></h2>
+   <div class="d-flex justify-content-center align-items-center mb-4">
+    <h2 class="m-0 me-3 text-white">Class Code: <span class="text-gold">@ViewBag.ClassCode.ClassCode</span></h2>
 
-        <div style="position: relative;">
-            <button type="button" class="btn btn-link text-white p-0 ms-2" data-bs-toggle="modal" data-bs-target="#RequestModal" style="text-decoration: none;">
-                <i class="fas fa-envelope fa-2x position-relative">
-                    <span id="request-badge" class="notification-badge hidden"></span>
-                </i>
-            </button>
-        </div>
+    <div style="position: relative;">
+        <button type="button" class="btn btn-link text-white p-0 ms-2" data-bs-toggle="modal" data-bs-target="#RequestModal" style="text-decoration: none;">
+            <i class="fas fa-envelope fa-2x position-relative">
+                <span id="request-badge" class="notification-badge hidden"></span>
+            </i>
+        </button>
     </div>
+
+    <div class="ms-4">
+        <button type="button" class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#ToolsModal">
+            <i class="fas fa-toolbox"></i> Tools
+        </button>
+    </div>
+   </div>
 </div>
 
 @Html.AntiForgeryToken()
@@ -23,7 +29,7 @@
                 <thead class="text-center">
                     <tr>
                         <th>Student</th>
-                        <th>Instrument</th>
+                        <th class="d-none d-md-table-cell">Instrument</th>
                         <th>Weekly Practice</th>
                         <th>Actions</th>
                     </tr>
@@ -161,6 +167,68 @@
         </div>
     </div>
 </div>
+
+
+@* --- MODAL FOR CLASS TOOLS (TAGS & BULK ASSIGNMENTS) --- *@
+<div class="modal fade" id="ToolsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-black border-secondary">
+            <div class="modal-header" style="border-bottom: 1px solid #4a3700;">
+                <h5 class="modal-title text-gold-metallic"><i class="fas fa-tools text-gold me-2"></i> Class Tools</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="mb-4 bg-dark p-3 rounded border border-secondary mx-1">
+                    <h6 class="text-gold mb-2">1. Create a Tag</h6>
+                    <div class="input-group">
+                        <input type="text" id="newTagName" class="form-control bg-black text-white border-secondary" placeholder="Type a tag name (like 'Beginners' or 'Piano')">
+                        <button class="btn btn-outline-light" id="createTagBtn">Create Tag</button>
+                    </div>
+                </div>
+
+                <div class="mb-4 bg-dark p-3 rounded border border-secondary mx-1">
+                    <h6 class="text-gold mb-2">2. Assign Tag to Student</h6>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <label class="text-white small mb-1">Select students (Tap to check)</label>
+                            <div id="studentCheckboxContainer" class="bg-black border border-secondary rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                            </div>
+                        </div>
+                        <div class="col-md-5 mt-2 mt-md-0">
+                            <select id="tagListSelect" class="form-select bg-black text-white border-secondary">
+                                <option value="">Select Tag...</option>
+                                </select>
+                        </div>
+                        <div class="col-md-2 mt-2 mt-md-0">
+                            <button class="btn btn-outline-light w-100" id="assignTagToStudentBtn">Assign</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-dark p-3 rounded border border-secondary mx-1 mb-2">
+                    <h6 class="text-gold mb-2">3. Send General Assignment</h6>
+                    <div class="mb-3">
+                        <label class="text-white small mb-1">Who gets this assignment?</label>
+                        <select id="bulkAssignTarget" class="form-select bg-black text-white border-secondary">
+                            <option value="ALL">All My Students</option>
+                            </select>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" id="bulkAssignTitle" class="form-control bg-black text-white border-secondary" placeholder="Assignment Title">
+                    </div>
+                    <div class="mb-3">
+                        <textarea id="bulkAssignDescription" class="form-control bg-black text-white border-secondary" placeholder="Assignment Description" rows="2"></textarea>
+                    </div>
+                    <button class="btn btn-gold w-100" id="sendBulkAssignBtn">Send Assignment</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -239,36 +307,101 @@
                 const learnId = $(this).data('learn-id');
                 loadStudentStats(learnId);
             });
+            //loadRequests tags
+            $('#ToolsModal').on('show.bs.modal', function () {
+               loadTags();
+            });
+
+            $('#createTagBtn').on('click', function() {
+               var tagName = $('#newTagName').val();
+               if (!tagName) { alert('Please type a tag name first.'); return; }
+
+               $.post('/Teacher/CreateTag', { name: tagName }, function() {
+                   $('#newTagName').val(''); // clear input
+                   loadTags(); // reload the dropdowns
+                   alert('Tag created!');
+               }).fail(function(xhr) { alert("Error: " + xhr.responseText); });
+            });
+
+            $('#assignTagToStudentBtn').on('click', function () {
+                // Create an empty array, then find every checked box and push its value into the array
+                var learnIds = [];
+                $('.student-tag-checkbox:checked').each(function () {
+                    learnIds.push($(this).val());
+                });
+
+                var tagId = $('#tagListSelect').val();
+
+                // Validate
+                if (learnIds.length === 0 || !tagId) {
+                    alert('Please check at least one student and select a tag.');
+                    return;
+                }
+
+                // Send to C#
+                $.ajax({
+                    url: '/Teacher/AssignTag',
+                    type: 'POST',
+                    traditional: true, // This is still required to send arrays properly to C#
+                    data: { studentLearnIds: learnIds, tagId: tagId },
+                    success: function () {
+                        alert('Tags assigned to selected students!');
+
+                        // Uncheck all the boxes to reset the form
+                        $('.student-tag-checkbox').prop('checked', false);
+                        $('#tagListSelect').val('');
+                    },
+                    error: function (xhr) {
+                        alert("Error: " + xhr.responseText);
+                    }
+                });
+            });
+
+            $('#sendBulkAssignBtn').on('click', function() {
+                var target = $('#bulkAssignTarget').val(); // "ALL" or a tagId
+                var title = $('#bulkAssignTitle').val();
+                var desc = $('#bulkAssignDescription').val();
+            
+                if (!title || !desc) { alert('Please fill out the title and description.'); return; }
+            
+                $.post('/Teacher/BulkAddAssignment', { targetId: target, title: title, description: desc }, function() {
+                    alert('Assignments sent out!');
+                    $('#bulkAssignTitle').val('');
+                    $('#bulkAssignDescription').val('');
+                    $('#ToolsModal').modal('hide');
+                    getStudents(); // refresh the table
+                }).fail(function(xhr) { alert("Error: " + xhr.responseText); });
+            });
         });
 
 
-            // UPDATED: Fetches data using the dates in the input fields
-            function loadStudentStats(learnId) {
-                const startDate = $('#statsStartDate').val();
-                const endDate = $('#statsEndDate').val();
+        // UPDATED: Fetches data using the dates in the input fields
+        function loadStudentStats(learnId) {
+            const startDate = $('#statsStartDate').val();
+            const endDate = $('#statsEndDate').val();
 
-                $.ajax({
-                    // Changed endpoint name to be more accurate
-                    url: '/Teacher/GetStudentStats', 
-                    data: { learnId: learnId, start: startDate, end: endDate },
-                    type: 'GET',
-                    success: function(response) {
-                        if(response.success) {
-                            renderPracticeLineChart(response.dailyData);
-                            renderAssignmentBarChart(response.assignmentData);
-                        }
-                    },
-                    error: function() {
-                        console.error("Failed to load student stats");
+            $.ajax({
+                // Changed endpoint name to be more accurate
+                url: '/Teacher/GetStudentStats', 
+                data: { learnId: learnId, start: startDate, end: endDate },
+                type: 'GET',
+                success: function(response) {
+                    if(response.success) {
+                        renderPracticeLineChart(response.dailyData);
+                        renderAssignmentBarChart(response.assignmentData);
                     }
-                });
-            }
+                },
+                error: function() {
+                    console.error("Failed to load student stats");
+                }
+            });
+        }
 
         // ==========================================
         //            CHART FUNCTIONS
         // ==========================================
 
-function renderPracticeLineChart(dailyData) {
+         function renderPracticeLineChart(dailyData) {
             const ctx = document.getElementById('studentPracticeChart').getContext('2d');
             if (practiceLineChart) practiceLineChart.destroy();
 
@@ -389,37 +522,61 @@ function renderPracticeLineChart(dailyData) {
                 dataType: 'json',
                 success: function (data) {
                     var html = "";
+
+                    // 1. Clear out the new checkbox container
+                    var $checkboxContainer = $('#studentCheckboxContainer');
+                    $checkboxContainer.empty();
+
+                    if (data.length === 0) {
+                        $checkboxContainer.append('<p class="text-muted small m-0">No students yet.</p>');
+                    }
+
                     $.each(data, function (i, student) {
+                        // 2. Build a touch-friendly checkbox for each student
+                        var checkboxHtml = `
+                            <div class="form-check mb-1">
+                                <input class="form-check-input student-tag-checkbox" type="checkbox" value="${student.learnId}" id="chk_student_${student.learnId}">
+                                <label class="form-check-label text-white" style="cursor: pointer; width: 100%;" for="chk_student_${student.learnId}">
+                                    ${student.studentName}
+                                </label>
+                            </div>`;
+                        $checkboxContainer.append(checkboxHtml);
+
+                        // 3. Build the main student table (Your existing code)
                         html += `<tr data-learn-id="${student.learnId}">
-                                            <td class="text-center">
-                                                <a href="#" class="student-stats-link text-gold" style="text-decoration: none; font-weight: bold; border-bottom: 1px dashed #FFD700;" data-learn-id="${student.learnId}" data-name="${student.studentName}">
-                                                    ${student.studentName}
-                                                </a>
-                                            </td>
-                                            <td class="text-center text-white">${student.instrumentName}</td>
-                                            <td class="text-center text-white">${timeDisplay(student.secondsPracticed)}</td>
-                                            <td class="text-center">
-                                                <div class="d-flex justify-content-center gap-2">
-                                                    <button class="btn btn-sm btn-gold toggle-assignments-btn" data-learn-id="${student.learnId}" title="Assignments">
-                                                        <i class="fas fa-list"></i> <span class="d-none d-md-inline ms-1">Assignments</span>
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger drop-student-btn" data-learn-id="${student.learnId}" title="Drop Student">
-                                                        <i class="fas fa-user-minus"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                         </tr>
-                                         <tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">
-                                            <td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>
-                                         </tr>`;
+                                    <td class="text-center">
+                                        <a href="#" class="student-stats-link text-gold" style="text-decoration: none; font-weight: bold; border-bottom: 1px dashed #FFD700;" data-learn-id="${student.learnId}" data-name="${student.studentName}">
+                                            ${student.studentName}
+                                        </a>
+                                    </td>
+                                            <td class="text-center text-white d-none d-md-table-cell">${student.instrumentName}</td>
+                                    <td class="text-center text-white">${timeDisplay(student.secondsPracticed)}</td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <button class="btn btn-sm btn-gold toggle-assignments-btn" data-learn-id="${student.learnId}" title="Assignments">
+                                                <i class="fas fa-list"></i> <span class="d-none d-md-inline ms-1">Assignments</span>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger drop-student-btn" data-learn-id="${student.learnId}" title="Drop Student">
+                                                <i class="fas fa-user-minus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                 </tr>
+                                 <tr class="assignment-row assignment-row-${student.learnId}" style="display:none;">
+                                    <td colspan="4"><div id="assignments-container-${student.learnId}" class="p-3 bg-dark">Loading...</div></td>
+                                 </tr>`;
                     });
+
+                    // Put the table HTML onto the page
                     $('#studentTableBody').html(html);
 
+                    // Re-attach the toggle events for the assignments
                     $('.toggle-assignments-btn').on('click', function () {
                         var learnId = $(this).data('learn-id');
                         var $row = $(`.assignment-row-${learnId}`);
                         var $span = $(this).find('span');
                         var $icon = $(this).find('i');
+
                         if ($row.is(':hidden')) {
                             getAssignments(learnId);
                             $span.text('Hide');
@@ -502,6 +659,23 @@ function renderPracticeLineChart(dailyData) {
         }
         function processRequest(reqId, learnId, action) { let verb = (action === 'Rejectrequest') ? 'DELETE' : 'POST'; $.ajax({ url: '/Teacher/' + action, type: verb, data: { requestId: reqId, studentLearnId: learnId }, success: function () { loadRequests(); getStudents(); checkInitialRequests(); }, error: function () { alert("Action failed."); } }); }
         function timeDisplay(totalSeconds) { if (!totalSeconds || totalSeconds < 0) return "0s"; var h = Math.floor(totalSeconds / 3600); var m = Math.floor((totalSeconds % 3600) / 60); var s = Math.floor(totalSeconds % 60); var parts = []; if (h > 0) parts.push(h + 'h'); if (m > 0) parts.push(m + 'm'); if (s > 0 || parts.length === 0) parts.push(s + 's'); return parts.join(' '); }
+   
+      function loadTags() {
+         // You will need a C# endpoint that returns the teacher's tags
+         $.get('/Teacher/GetTags', function(tags) {
+             $('#tagListSelect').empty().append('<option value="">Select Tag...</option>');
+             $('#bulkAssignTarget').empty().append('<option value="ALL">All My Students</option>');
+
+             if (tags && tags.length > 0) {
+                 $.each(tags, function(i, tag) {
+                     // Add to the assign dropdown
+                     $('#tagListSelect').append(`<option value="${tag.tagId}">${tag.tagName}</option>`);
+                     // Add to the bulk assignment dropdown
+                     $('#bulkAssignTarget').append(`<option value="${tag.tagId}">Tag Group: ${tag.tagName}</option>`);
+                 });
+             }
+         });
+      }
     </script>
 
     <style>

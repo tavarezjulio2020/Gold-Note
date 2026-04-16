@@ -3,6 +3,8 @@ using System.Linq;
 using System;
 using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.ComponentModel.DataAnnotations;
 
 namespace GoldNote.Models.Teacher
 {
@@ -45,6 +47,8 @@ namespace GoldNote.Models.Teacher
     {
         public string ClassCode { get; set; }
     }
+
+
 
     // --- Main Repository Class ---
     public class Teacher

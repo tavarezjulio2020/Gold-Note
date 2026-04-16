@@ -111,7 +111,7 @@ th {
    }
 
 /* ======================================================
-   4. NAVIGATION & FOOTER (FIXED WEIRDNESS)
+   4. NAVIGATION & FOOTER (FIXED WEIRDNESS + MOBILE FRIENDLY)
    ====================================================== */
 .navbar-custom {
    background-color: var(--bg-black) !important;
@@ -126,7 +126,7 @@ footer.footer-custom {
 }
 
 .footer-btn {
-   min-width: 130px;
+   /* REMOVED: min-width: 130px; (This is what broke mobile screens!) */
    height: 45px;
    display: flex;
    align-items: center;
@@ -134,10 +134,12 @@ footer.footer-custom {
    /* Square Buttons */
    border-radius: 4px;
    text-decoration: none;
-   margin: 0 5px;
+   margin: 0 2px; /* Very small margin so they fit on mobile */
+   padding: 0 5px; /* Minimal padding */
    color: #888;
    border: 1px solid #333;
    transition: all 0.2s ease;
+   flex: 1; /* This forces the 4 buttons to perfectly share the screen width */
 }
 
    .footer-btn.active {

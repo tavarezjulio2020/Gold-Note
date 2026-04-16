@@ -177,24 +177,35 @@
             });
         }
 
-        // --- MANAGE INSTRUMENTS (Improved Modal UI) ---
+        // --- MANAGE INSTRUMENTS (Sticky Footer UI & Search Bar) ---
         function showManageInstrumentsModal() {
             $.ajax({
                 url: '/Home/GetInstruments', type: 'GET', dataType: 'json',
                 success: function (allInstruments) {
                     let modalContent = `
-                                <div class="text-center mb-4">
+                                <div class="text-center mb-3 flex-shrink-0">
                                     <i class="fas fa-sliders-h fa-2x text-gold mb-2"></i>
                                     <h3 class="text-white">Manage Instruments</h3>
-                                    <p class="text-muted small">Select the instruments you are currently learning.</p>
+                                    <p class="text-muted small mb-0">Select the instruments you are currently learning.</p>
                                 </div>
-                                <form id="instrumentUpdateForm" class="instrument-list-wrapper">
+
+                                <div class="input-group mb-3 shadow-sm flex-shrink-0">
+                                    <span class="input-group-text bg-secondary-dark border-secondary text-gold">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" id="manageInstrumentSearch" class="form-control bg-black text-white border-secondary" placeholder="Search instruments...">
+                                </div>
+
+                                <form id="instrumentUpdateForm" class="d-flex flex-column" style="overflow: hidden; flex: 1;">
+                                    <div class="instrument-list-wrapper pe-2" id="manageInstrumentList" style="overflow-y: auto; flex: 1;">
                             `;
-                             
+
                     allInstruments.forEach(instrument => {
-                        const isChecked = userInstrumentIds.includes(instrument.instrumentId); 
+                        const isChecked = userInstrumentIds.includes(instrument.instrumentId);
+
+                        // We added a data-name attribute here so the search bar can easily read the instrument name!
                         modalContent += `
-                                    <label class="instrument-option-card d-flex align-items-center justify-content-between p-3 mb-2 rounded border border-secondary">
+                                    <label class="instrument-option-card d-flex align-items-center justify-content-between p-3 mb-2 rounded border border-secondary" data-name="${instrument.instrumentName.toLowerCase()}">
                                         <span class="d-flex align-items-center">
                                             <i class="fas fa-music text-muted me-3"></i>
                                             <span class="text-white lead mb-0" style="font-size: 1.1rem;">${instrument.instrumentName}</span>
@@ -205,15 +216,33 @@
                     });
 
                     modalContent += `
-                                <div class="d-grid gap-2 mt-4 pt-3 border-top border-secondary">
-                                    <button type="submit" class="btn btn-gold">Save Changes</button>
-                                    <button type="button" onclick="closeInstrumentModal()" class="btn btn-outline-secondary">Cancel</button>
-                                </div>
+                                    </div>
+                                    <div class="d-grid gap-2 mt-3 pt-3 border-top border-secondary flex-shrink-0">
+                                        <button type="submit" class="btn btn-gold">Save Changes</button>
+                                        <button type="button" onclick="closeInstrumentModal()" class="btn btn-outline-secondary">Cancel</button>
+                                    </div>
                                 </form>`;
 
-                    $('#instrumentModal').html(modalContent); 
+                    $('#instrumentModal').html(modalContent);
                     $('#instrumentModalOverlay').css('display', 'flex').hide().fadeIn();
                     $('#instrumentUpdateForm').off('submit').on('submit', handleInstrumentUpdate);
+
+                    // --- SEARCH BAR LOGIC ---
+                    $('#manageInstrumentSearch').on('input', function () {
+                        const searchTerm = $(this).val().toLowerCase();
+
+                        // Look at every instrument card in the modal
+                        $('#manageInstrumentList .instrument-option-card').each(function () {
+                            const instrumentName = $(this).data('name');
+
+                            // If the typed text is in the name, show it. Otherwise, hide it.
+                            if (instrumentName.includes(searchTerm)) {
+                                $(this).removeClass('d-none').addClass('d-flex');
+                            } else {
+                                $(this).removeClass('d-flex').addClass('d-none');
+                            }
+                        });
+                    });
                 }
             });
         }
@@ -320,14 +349,16 @@
     }
 
     .custom-modal-box {
-        background-color: #121212 !important; 
+        background-color: #121212 !important;
         border: 1px solid #FFD700;
         padding: 2rem;
         border-radius: 12px;
         width: 90%;
         max-width: 500px;
         max-height: 85vh;
-        overflow-y: auto;
+        /* --- NEW FLEXBOX LAYOUT --- */
+        display: flex;
+        flex-direction: column;
         box-shadow: 0 0 40px rgba(0,0,0,0.8);
         color: white;
     }

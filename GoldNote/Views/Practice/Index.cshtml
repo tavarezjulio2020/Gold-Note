@@ -13,7 +13,7 @@
                     </h2>
 
                     <div class="mb-4 d-flex justify-content-center">
-                        <select class="form-select form-select-lg bg-black text-white border-secondary w-75 text-center"
+                        <select class="form-select form-select-lg bg-black text-white border-secondary w-100 w-md-75 text-center mx-auto"
                                 name="instSelector"
                                 id="instrument_selection">
                         </select>
@@ -80,7 +80,7 @@
                 <form id="assignmentForm"></form>
             </div>
         </div>
-        <button id="metronomeBtn" class="btn btn-outline-warning btn-circle-small position-absolute top-0 end-0 m-4">
+        <button id="metronomeBtn" class="btn btn-outline-warning btn-circle-small position-absolute top-0 end-0 m-2 m-md-4">
             <i class="fas fa-tachometer-alt"></i>
         </button>
 
@@ -441,7 +441,7 @@
                 type: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    var html = "<option value=''>-- Select Instrument --</option>";
+                    var html = "<option value=''>Select Instrument</option>";
                     for (let i = 0; i < data.length; i++) {
                         html += "<option value='" + data[i].instrumentId + "'>" + data[i].instrumentName + "</option>"
                     }
@@ -634,6 +634,47 @@
 
         .gold-range::-webkit-slider-runnable-track {
             background: #444;
+        }
+
+
+        /* ==========================================
+           📱 MOBILE RESPONSIVE TWEAKS 
+           ========================================== */
+        @media (max-width: 768px) {
+            /* Shrink the giant clock text for phones */
+            #timerDisplay {
+                font-size: 3.5rem; 
+            }
+
+            /* Center the metronome popup perfectly on mobile */
+            .metronome-popup {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                right: auto; /* Remove the 25px right pin */
+                width: 90%;  /* Take up most of the mobile screen */
+                max-width: 320px;
+                z-index: 10005;
+                box-shadow: 0 0 50px rgba(0,0,0,0.9); /* Darker shadow to act as overlay */
+            }
+
+            /* Shrink the pause/stop buttons slightly */
+            .btn-circle {
+                width: 65px;
+                height: 65px;
+                font-size: 1.5rem;
+            }
+
+            /* Adjust padding so content doesn't hit phone edges */
+            .practice-container {
+                padding: 10px;
+                margin-top: 40px; /* Leave room for the top right metronome button */
+            }
+            
+            .digital-clock-container {
+                padding: 10px 20px;
+            }
         }
     </style>
 }

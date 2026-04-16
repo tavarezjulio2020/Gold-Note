@@ -3,7 +3,9 @@ using GoldNote.Models.Student;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.Metrics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GoldNote.Data
 {
@@ -83,6 +85,20 @@ namespace GoldNote.Data
     {
         public string title { get; set; }
         public int count { get; set; }
+    }
+
+    public class LearnTag
+    {
+        public int learn_id { get; set; }
+        public int tag_id { get; set; }
+        public DateTime assigned_date { get; set; } = DateTime.UtcNow;
+    }
+
+    public class Tag
+    {
+        public int tag_id { get; set; }
+        public string tag_name { get; set; }
+        public string profile_id { get; set; }
     }
 
     public class GoldNoteDbContext
@@ -618,6 +634,144 @@ namespace GoldNote.Data
             }
 
             return new { success = true, dailyData = dailyData, assignmentData = assignmentData };
+        }
+
+        // --- NEW TAG AND BULK ASSIGNMENT METHODS ---
+
+        public List<Tag> GetTags(string profileId)
+        {
+            List<Tag> tags = new List<Tag>();
+            string sql = "SELECT tag_id, tag_name FROM tags WHERE profile_id = @pid";
+
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@pid", profileId);
+
+            con.Open();
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                tags.Add(new Tag
+                {
+                    tag_id = Convert.ToInt32(reader["tag_id"]),
+                    tag_name = reader["tag_name"].ToString()
+                });
+            }
+            return tags;
+        }
+
+        public void CreateTag(string name, string profileId)
+        {
+            string sql = "INSERT INTO tags (tag_name, profile_id) VALUES (@name, @pid)";
+            using var con = new SqlConnection(_connectionString);
+            using var cmd = new SqlCommand(sql, con);
+            cmd.Parameters.AddWithValue("@name", name);
+            cmd.Parameters.AddWithValue("@pid", profileId);
+
+            con.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        public bool AssignTag(int learnId, int tagId)
+        {
+            using var con = new SqlConnection(_connectionString);
+            con.Open();
+
+            // Check for duplicates first
+            string checkSql = "SELECT COUNT(*) FROM learn_tags WHERE learn_id = @lid AND tag_id = @tid";
+            using var checkCmd = new SqlCommand(checkSql, con);
+            checkCmd.Parameters.AddWithValue("@lid", learnId);
+            checkCmd.Parameters.AddWithValue("@tid", tagId);
+
+            if (Convert.ToInt32(checkCmd.ExecuteScalar()) > 0)
+            {
+                return false; // Already tagged
+            }
+
+            // Insert new tag
+            string insertSql = "INSERT INTO learn_tags (learn_id, tag_id) VALUES (@lid, @tid)";
+            using var insertCmd = new SqlCommand(insertSql, con);
+            insertCmd.Parameters.AddWithValue("@lid", learnId);
+            insertCmd.Parameters.AddWithValue("@tid", tagId);
+            insertCmd.ExecuteNonQuery();
+
+            return true;
+        }
+
+        public void BulkAddAssignment(string targetId, string title, string description, string creatorId)
+        {
+            using var con = new SqlConnection(_connectionString);
+            con.Open();
+            using var transaction = con.BeginTransaction();
+
+            try
+            {
+                // 1. Create the Assignment (Note: your DB uses 'desctription' with a typo based on your previous queries!)
+                string assignSql = @"INSERT INTO assignment (title, desctription, creator_id, creationDate) 
+                                     VALUES (@title, @desc, @creator, @date);
+                                     SELECT SCOPE_IDENTITY();";
+                int newAssignmentId;
+                using (var cmd = new SqlCommand(assignSql, con, transaction))
+                {
+                    cmd.Parameters.AddWithValue("@title", title);
+                    cmd.Parameters.AddWithValue("@desc", description);
+                    cmd.Parameters.AddWithValue("@creator", creatorId);
+                    cmd.Parameters.AddWithValue("@date", DateTime.UtcNow);
+                    newAssignmentId = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 2. Figure out who gets the assignment
+                List<int> learnIds = new List<int>();
+
+                if (targetId == "ALL")
+                {
+                    string allSql = @"SELECT sic.student_instrument_id 
+                                      FROM studentInClass sic
+                                      JOIN classRoom c ON sic.classroom_id = c.classRoom_id
+                                      WHERE c.teacher_id = @teacher";
+                    using (var cmd = new SqlCommand(allSql, con, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@teacher", creatorId);
+                        using var reader = cmd.ExecuteReader();
+                        while (reader.Read()) learnIds.Add(Convert.ToInt32(reader[0]));
+                    }
+                }
+                else if (int.TryParse(targetId, out int parsedTagId))
+                {
+                    string tagSql = "SELECT learn_id FROM learn_tags WHERE tag_id = @tid";
+                    using (var cmd = new SqlCommand(tagSql, con, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@tid", parsedTagId);
+                        using var reader = cmd.ExecuteReader();
+                        while (reader.Read()) learnIds.Add(Convert.ToInt32(reader[0]));
+                    }
+                }
+
+                // 3. Assign to students
+                if (learnIds.Count > 0)
+                {
+                    string insertSql = "INSERT INTO assigned_assignments (assignment_id, learn_id, activeLearning) VALUES (@aid, @lid, 1)";
+                    using (var cmd = new SqlCommand(insertSql, con, transaction))
+                    {
+                        cmd.Parameters.Add("@aid", System.Data.SqlDbType.Int);
+                        cmd.Parameters.Add("@lid", System.Data.SqlDbType.Int);
+
+                        foreach (var lid in learnIds)
+                        {
+                            cmd.Parameters["@aid"].Value = newAssignmentId;
+                            cmd.Parameters["@lid"].Value = lid;
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                throw ex;
+            }
         }
     }
 

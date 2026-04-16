@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GoldNote.Models.Teacher;
 using GoldNote.Data;
+using Microsoft.EntityFrameworkCore;
+using Azure;
 
 namespace GoldNote.Controllers.Teachers
 {
@@ -242,5 +244,81 @@ namespace GoldNote.Controllers.Teachers
                 return Json(new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet]
+        public IActionResult GetTags()
+        {
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var tags = _db.GetTags(teacherId);
+
+            // Reshape it slightly so the frontend JS matches exactly
+            var formattedTags = tags.Select(t => new {
+                tagId = t.tag_id,
+                tagName = t.tag_name
+            }).ToList();
+
+            return Json(formattedTags);
+        }
+
+        [HttpPost]
+        public IActionResult CreateTag(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return BadRequest("Tag name cannot be empty.");
+
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            _db.CreateTag(name, teacherId);
+
+            return Ok();
+        }
+
+        [HttpPost]
+        public IActionResult AssignTag(List<int> studentLearnIds, int tagId)
+        {
+            if (studentLearnIds == null || studentLearnIds.Count == 0)
+            {
+                return BadRequest("No students selected.");
+            }
+
+            int successCount = 0;
+
+            // Loop through the array of IDs sent from the frontend
+            foreach (var learnId in studentLearnIds)
+            {
+                // Call your existing database method for each student!
+                bool success = _db.AssignTag(learnId, tagId);
+
+                if (success)
+                {
+                    successCount++;
+                }
+            }
+
+            // Even if some students already had the tag (returning false), 
+            // we successfully processed the list without crashing.
+            return Ok(new { message = $"Successfully tagged {successCount} students." });
+        }
+
+        [HttpPost]
+        public IActionResult BulkAddAssignment(string targetId, string title, string description)
+        {
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(description))
+            {
+                return BadRequest("Title and description are required.");
+            }
+
+            var teacherId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            try
+            {
+                _db.BulkAddAssignment(targetId, title, description, teacherId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Failed to bulk add assignments.", error = ex.Message });
+            }
+        }
+
+
     }
 }
