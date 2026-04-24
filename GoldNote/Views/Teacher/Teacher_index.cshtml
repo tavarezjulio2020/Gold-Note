@@ -603,38 +603,53 @@
 
         function renderAssignmentsTable(assignments, learnId) {
             let html = `
-                        <div class="card border-secondary">
-                            <div class="card-header position-relative d-flex align-items-center" style="background-color: #111; border-bottom: 1px solid #444; height: 50px;">
-                                <span class="h5 m-0 position-absolute top-50 start-50 translate-middle text-gold-metallic">Assignments</span>
-                                <div class="w-100 d-flex justify-content-end">
-                                    <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}"><i class="fas fa-plus"></i> Add New</button>
-                                </div>
-                            </div>
-                            <table class="table table-dark table-hover table-sm mb-0 align-middle">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid #444; background-color: #000 !important;">
-                                        <th class="text-center" style="width: 30%; background-color: #000;">Title</th>
-                                        <th class="text-center" style="width: 50%; background-color: #000;">Description</th>
-                                        <th class="text-center" style="width: 20%; background-color: #000;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
+                <div class="card border-secondary overflow-hidden">
+                    <div class="card-header d-flex justify-content-between align-items-center"
+                         style="background-color: #111; border-bottom: 1px solid #444; padding: 10px 12px;">
+
+                        <h6 class="m-0 text-gold-metallic fw-bold" style="letter-spacing: 1px; font-size: 0.9rem;">
+                            ASSIGNMENTS
+                        </h6>
+
+                        <button class="btn btn-gold btn-sm add-assignment-modal-btn" data-learn-id="${learnId}">
+                            <i class="fas fa-plus"></i>
+                            <span class="d-none d-sm-inline ms-1">Add New</span>
+                        </button>
+                    </div>
+
+                    <table class="table table-dark table-sm mb-0 align-middle" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #000;">
+                                <th style="width: 35%; padding-left: 10px; font-size: 0.75rem; color: #888;">TITLE</th>
+                                <th style="width: 45%; font-size: 0.75rem; color: #888;">DESC</th>
+                                <th style="width: 20%; text-align: center; font-size: 0.75rem; color: #888;">EDIT</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
             if (assignments && assignments.length > 0) {
                 $.each(assignments, function (i, item) {
                     const safeTitle = $('<div>').text(item.title).html();
                     const safeDesc = $('<div>').text(item.description).html();
-                    html += `<tr>
-                                        <td class="text-white text-center">${safeTitle}</td>
-                                        <td class="text-white text-start text-wrap" style="max-width: 0;">${safeDesc}</td>
-                                        <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-2">
-                                                <button class="btn btn-sm btn-outline-primary edit-assignment-btn" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}"><i class="fas fa-edit"></i></button>
-                                                <button class="btn btn-sm btn-outline-danger delete-assignment-btn" data-assignment-id="${item.assignmentId}"><i class="fas fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>`;
+                    html += `
+                        <tr style="border-bottom: 1px solid #222;">
+                            <td class="text-white small fw-bold text-wrap" style="padding-left: 10px; overflow-wrap: break-word;">${safeTitle}</td>
+                            <td class="text-secondary" style="font-size: 0.7rem; line-height: 1.2; overflow-wrap: break-word;">${safeDesc}</td>
+                            <td>
+                                <div class="d-flex flex-column align-items-center gap-2 py-1">
+                                    <button class="btn btn-sm btn-outline-primary edit-assignment-btn" style="padding: 2px 6px;" data-assignment-id="${item.assignmentId}" data-title="${safeTitle}" data-description="${safeDesc}">
+                                        <i class="fas fa-edit fa-xs"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-assignment-btn" style="padding: 2px 6px;" data-assignment-id="${item.assignmentId}">
+                                        <i class="fas fa-trash fa-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
                 });
-            } else { html += `<tr><td colspan="3" class="text-center text-muted py-3">No assignments yet.</td></tr>`; }
+            } else {
+                html += `<tr><td colspan="3" class="text-center text-muted py-4 small">No assignments yet.</td></tr>`;
+            }
             html += `</tbody></table></div>`;
             return html;
         }
@@ -704,6 +719,63 @@
 
         .hidden {
             display: none;
+        }
+
+        /* --- MOBILE OPTIMIZATIONS --- */
+        @@media (max-width: 768px) {
+            /* Reduce padding so the table has more room */
+            .assignment-row td 
+            {
+                padding: 10px 5px !important;
+            }
+
+            /* Make the action buttons slightly smaller on mobile */
+            .edit-assignment-btn, .delete-assignment-btn {
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
+
+            /* Force the assignments table to take up the full width */
+            .assignment-row .card {
+                margin: 0 -5px;
+                border-radius: 0;
+            }
+
+            /* Tighten the font size for the student names and times */
+            #studentTableBody td {
+                font-size: 0.9rem;
+                padding: 8px 4px;
+            }
+            /* Reduce overall page padding so we use more of the screen width */
+            .container {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+            /* Make the main student table text slightly smaller */
+            .table th, .table td {
+                font-size: 0.85rem;
+                padding: 10px 5px !important;
+            }
+            /* Reduce padding in the expandable assignment area */
+            .assignment-row td {
+                padding: 8px 2px !important;
+            }
+            /* Make the "Class Code" area wrap better on small screens */
+            .display-4 {
+                font-size: 2rem;
+            }
+
+            h2.text-white {
+                font-size: 1rem !important;
+            }
+            /* Force the assignment sub-card to have no rounded corners to save space */
+            .assignment-row .card {
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+
+
         }
     </style>
 }
