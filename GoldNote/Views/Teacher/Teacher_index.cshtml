@@ -319,7 +319,7 @@
                $.post('/Teacher/CreateTag', { name: tagName }, function() {
                    $('#newTagName').val(''); // clear input
                    loadTags(); // reload the dropdowns
-                   alert('Tag created!');
+                
                }).fail(function(xhr) { alert("Error: " + xhr.responseText); });
             });
 
@@ -344,8 +344,7 @@
                     type: 'POST',
                     traditional: true, // This is still required to send arrays properly to C#
                     data: { studentLearnIds: learnIds, tagId: tagId },
-                    success: function () {
-                        alert('Tags assigned to selected students!');
+                    success: function () { 
 
                         // Uncheck all the boxes to reset the form
                         $('.student-tag-checkbox').prop('checked', false);
@@ -364,8 +363,7 @@
             
                 if (!title || !desc) { alert('Please fill out the title and description.'); return; }
             
-                $.post('/Teacher/BulkAddAssignment', { targetId: target, title: title, description: desc }, function() {
-                    alert('Assignments sent out!');
+                $.post('/Teacher/BulkAddAssignment', { targetId: target, title: title, description: desc }, function() { 
                     $('#bulkAssignTitle').val('');
                     $('#bulkAssignDescription').val('');
                     $('#ToolsModal').modal('hide');
@@ -690,6 +688,18 @@
         .assignment-row td {
             background-color: #000;
             padding: 10px 20px;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -2px; /* Adjust these to move the dot around */
+            right: -2px;
+            height: 12px; /* Size of the dot */
+            width: 12px;
+            background-color: #ff4444; /* Red color */
+            border-radius: 50%; /* Makes it a circle */
+            border: 2px solid #000; /* Adds a black ring so it pops against the icon */
+            z-index: 2;
         }
 
         .hidden {
