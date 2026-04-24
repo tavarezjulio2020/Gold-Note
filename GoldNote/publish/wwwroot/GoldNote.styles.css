@@ -1,0 +1,179 @@
+/* /Views/Shared/_Layout.cshtml.rz.scp.css */
+/* ======================================================
+   1. GLOBAL VARIABLES & RESET
+   ====================================================== */
+:root[b-wa3uxovkwd] {
+    --gold-primary: #FFD700;
+    --gold-dark: #4a3700;
+    --bg-black: #000000;
+    --text-white: #ffffff;
+}
+
+html[b-wa3uxovkwd] {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html[b-wa3uxovkwd] {
+    font-size: 16px;
+  }
+}
+
+body[b-wa3uxovkwd] {
+    background-color: var(--bg-black);
+    color: var(--text-white);
+    margin-bottom: 60px;
+}
+
+/* ======================================================
+   2. GLOBAL LINK STYLING
+   ====================================================== */
+a[b-wa3uxovkwd] {
+    color: var(--gold-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover[b-wa3uxovkwd] {
+    color: #e6c200;
+    text-decoration: underline;
+}
+
+/* Navbar Brand Overrides */
+a.navbar-brand[b-wa3uxovkwd] {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+  color: var(--gold-primary) !important;
+}
+
+.gold-brand[b-wa3uxovkwd] {
+   color: var(--gold-primary) !important;
+   font-size: 1.5em;
+   font-weight: bold;
+   text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+   transition: color 0.3s;
+}
+
+.gold-brand:hover[b-wa3uxovkwd] {
+   color: #fff !important;
+   text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+/* ======================================================
+   3. THE "METALLIC GOLD" BUTTON STYLE
+   ====================================================== */
+
+/* We apply this style to:
+   1. .btn-gold (Your custom class)
+   2. .btn-primary (Bootstrap default - overrides Blue)
+   3. button (Generic buttons)
+*/
+.btn-gold[b-wa3uxovkwd], 
+.btn-primary[b-wa3uxovkwd]{
+    /* The Horizontal Metallic Gradient */
+    background: linear-gradient(90deg, var(--gold-dark) 0%, var(--gold-primary) 45%, var(--gold-primary) 55%, var(--gold-dark) 100%);
+    
+    color: #000 !important; /* Black Text for contrast */
+    border: 1px solid var(--gold-dark); /* Dark border */
+    border-radius: 5px; /* Square with slight roundness */
+    
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    
+    /* Metallic Glow */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5); 
+    transition: all 0.3s ease;
+}
+
+/* HOVER STATE: Lift up and glow brighter */
+.btn-gold:hover[b-wa3uxovkwd], 
+.btn-primary:hover[b-wa3uxovkwd],
+button:not(.navbar-toggler):not(.btn-close):not(.nav-btn):hover[b-wa3uxovkwd] {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Gold Glow */
+    background: linear-gradient(90deg, var(--gold-dark) 0%, #ffe033 45%, #ffe033 55%, var(--gold-dark) 100%); /* Slightly brighter center */
+    color: #000 !important;
+    border-color: var(--gold-primary);
+}
+
+/* ACTIVE STATE: Press down */
+.btn-gold:active[b-wa3uxovkwd], 
+.btn-primary:active[b-wa3uxovkwd],
+button:not(.navbar-toggler):not(.btn-close):not(.nav-btn):active[b-wa3uxovkwd] {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ======================================================
+   4. LAYOUT & HELPERS
+   ====================================================== */
+.bg-secondary-dark[b-wa3uxovkwd] {
+   background-color: #111 !important; 
+   border-bottom: 1px solid #333;
+}
+
+.border-top[b-wa3uxovkwd] { border-top: 1px solid #333; }
+.border-bottom[b-wa3uxovkwd] { border-bottom: 1px solid #333; }
+
+.box-shadow[b-wa3uxovkwd] {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+.footer[b-wa3uxovkwd] {
+   position: absolute;
+   bottom: 0;
+   width: 100%;
+   white-space: nowrap;
+   height: 60px; /* Reduced slightly to fit nav buttons */
+   line-height: 60px;
+   background-color: #000;
+}
+
+/* ======================================================
+   5. MODAL STYLES
+   ====================================================== */
+.modal-overlay[b-wa3uxovkwd] {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.8); /* Darker overlay */
+    z-index: 999;
+}
+
+.modal-box[b-wa3uxovkwd] {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    background: #111; /* Dark Background */
+    border: 1px solid var(--gold-primary); /* Gold Border */
+    padding: 20px; border-radius: 8px; z-index: 1000;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    color: #fff !important; /* White Text */
+    width: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+    text-align: left;
+}
+
+/* Ensure inputs inside modal look good on dark mode */
+.modal-box input[b-wa3uxovkwd], .modal-box select[b-wa3uxovkwd] {
+    background-color: #222;
+    color: white;
+    border: 1px solid #444;
+}
+
+/* Modal Helper Classes */
+.notification-badge[b-wa3uxovkwd] {
+   position: absolute;
+   top: 5px; 
+   right: 5px; 
+   width: 10px;
+   height: 10px;
+   border-radius: 50%; 
+   background-color: red;
+   z-index: 10;
+   border: 1px solid white;
+}
+
+.hidden[b-wa3uxovkwd] {
+   display: none;
+}

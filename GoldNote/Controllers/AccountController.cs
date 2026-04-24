@@ -77,10 +77,17 @@ namespace GoldNote.Controllers
         [HttpPost]
         public IActionResult Register(RegisterViewModel model)
         {
+            // ADD THIS LINE FIRST: 
+            // This tells the server to completely ignore validation for the phone number
+            ModelState.Remove("PhoneNumber");
+
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
+
+            // Convert empty strings to true nulls for the database
+            model.PhoneNumber = string.IsNullOrWhiteSpace(model.PhoneNumber) ? null : model.PhoneNumber;
 
             string errorMessage = _db.CreateUser(
                 model.Username,

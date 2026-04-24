@@ -319,7 +319,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify(practiceData),
                 success: function (response) {
-                    alert("Practice session saved!");
                     $('input[name="assignment_complete"]').prop('checked', false);
                     updatePracticeNotes();
                 },
@@ -640,7 +639,7 @@
         /* ==========================================
            📱 MOBILE RESPONSIVE TWEAKS 
            ========================================== */
-        @media (max-width: 768px) {
+        @@media (max-width: 768px) {
             /* Shrink the giant clock text for phones */
             #timerDisplay {
                 font-size: 3.5rem; 

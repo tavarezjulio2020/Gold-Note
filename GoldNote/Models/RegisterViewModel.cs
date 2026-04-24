@@ -15,7 +15,7 @@ namespace GoldNote.Models
         [EmailAddress(ErrorMessage = "Invalid Email Address")]
         public string Email { get; set; }
 
-        // --- NEW FIELD: PHONE (OPTIONAL) ---
+        [Required(ErrorMessage = "Phone number is required")]
         [Phone(ErrorMessage = "Invalid Phone Number")]
         public string PhoneNumber { get; set; }
 
